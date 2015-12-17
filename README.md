@@ -4,11 +4,18 @@
   * Report.pdf                
   * Presentation.pdf
 * Documents
-  * listOfFilesModified.txt 
-  * CodeDiff.txt 
   * gdfa-v1.2-gcc-4.3.0.patch : gdfa pathch for gcc 4.3.0 
 * Test
-* Source : The gcc 4.3.0 source code base patched with gdfa where we have done the modifications
+* SourceCodeInfo : 
+  * listOfFilesModified.txt : List of files Modified 
+  * CodeDiff.txt : This file can be patched to gcc 4.3.0 source code 
+  * Source Files
+    * gimple-pfbvdfa-driver.c
+    * gimple-pfbvdfa-specs.c
+    * gimple-pfbvdfa-support.c
+    * gimple-pfbvdfa.h
+    * passes.c
+    * tree-pass.h
 
 ##HOW TO BUILD
 
@@ -26,10 +33,6 @@
 
 ##HOW TO TEST THE CORRECTNESS OF BEHAVIOUR
 
-* cd Test 
-* foreach test in `find *.c -name .`
-  ** cc1 -fgdfa -fdump-tree-all $test /*This will generate many dump files as test_1.c.*
-  ** 
 The Test directory contains the following testcases:
 
         Test_1     : Contain the case test_1.c and the expected output of all the dump files as  gold_test_1.c.*

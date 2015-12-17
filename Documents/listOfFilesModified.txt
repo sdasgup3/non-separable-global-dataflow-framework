@@ -1,6 +1,6 @@
-gimple-pfbvdfa-driver.c
-gimple-pfbvdfa-specs.c
-gimple-pfbvdfa-support.c
-gimple-pfbvdfa.h
-passes.c
-tree-pass.h
+gcc/gimple-pfbvdfa-driver.c
+gcc/gimple-pfbvdfa-specs.c
+gcc/gimple-pfbvdfa-support.c
+gcc/gimple-pfbvdfa.h
+gcc/passes.c
+gcc/tree-pass.h
