@@ -1,0 +1,3445 @@
+diff -Naur gcc-4.3.0/gcc/basic-block.h gcc-4.3.0/gcc/basic-block.h
+--- gcc-4.3.0/gcc/basic-block.h	2008-01-28 00:14:42.000000000 +0530
++++ gcc-4.3.0/gcc/basic-block.h	2010-03-22 02:00:10.507776166 +0530
+@@ -241,6 +241,9 @@
+   /* The index of this block.  */
+   int index;
+ 
++  /* The dfs_numbering of a basic block*/
++  signed int dfs_number;
++
+   /* The loop depth of this block.  */
+   int loop_depth;
+ 
+diff -Naur gcc-4.3.0/gcc/ChangeLog.grc gcc-4.3.0/gcc/ChangeLog.grc
+--- gcc-4.3.0/gcc/ChangeLog.grc	1970-01-01 05:30:00.000000000 +0530
++++ gcc-4.3.0/gcc/ChangeLog.grc	2010-03-22 02:00:10.507776166 +0530
+@@ -0,0 +1,72 @@
++2008-06-08 Seema Ravandale <seema@cse.iitb.ac.in>
++	
++	* gcc/gimple-pfbvdfa-support.c: (init_gimple_pfbvdfa_execute) 
++	Now make number_of_nodes equal to n_basic_blocks as entry and exit 
++	block indices start from 0 and 1.
++	(find_index_bb) No more separate handling for entry and exit block
++	index.
++	(assign_indices_to_local_expr) While checking for first operand to be 
++	interger_cnt, op0_index  should be made -1.
++	* gcc/tree-cfg.c: (init_empty_tree_cfg) Initialize dfs_number to
++	-1.
++
++2008-02-25 Seema Ravandale <seema@cse.iitb.ac.in>
++	
++	* gcc/gimple-pfbvdfa-support.c: (type_of_var) Default return 
++	uninteresting_var_type.
++	(is_global_var_grc) New function to test for a global variable.
++	(assign_indices_to_var) Handle case of uninteresting
++	var type.
++	(assign_indices_to_defn) Handle case of uninteresting 
++	defn_type.
++	
++2008-11-28 Seema Ravandale <seema@cse.iitb.ac.in>
++
++	* gcc/gimple-pfbvdfa-driver.c: (effect_of_a_statement) accumulate 
++	effect of a statement for entity definition.
++	(defn_in_statement) New function to compute gen, kill of a
++	definition occured in a statement.
++	
++2008-11-25 Seema Ravandale <seema@cse.iitb.ac.in>
++		
++	Specifications and supportive functions for Reaching definition 
++	analysis.
++	
++	* gcc/gimple-pfbvdfa-specs.c: (struct gimple_pfbv_dfa_spec gdfa_rd)
++	Specification for reaching definition analysis.
++	(struct tree_opt_pass pass_gimple_pfbv_rd_dfa) New pass.
++	(gimple_pfbv_rd_dfa) Function to call for above pass.
++	* gcc/gimple-pfbvdfa.h: (struct defn_index_list) Data structure to 
++	store definition numbers in linked-list.
++	* gcc/gimple-pfbvdfa-support.c: (assign-indices_to_defn, type_of_defn,
++	is_valid_defn) Accessor functions to assign indices to definitions 
++	which are under consideration for gdfa.
++	(defn_of_vars) Data sturecture to store definitions of a variable.
++	* gcc/passes.c: Add new pass pass_gimple_pfbv_rd_dfa.
++	* gcc/tree-pass.h: Extern definition of pass_gimple_pfbv_rd_dfa.
++	
++2008-09-11 Uday Khedker <uday@cse.iitb.ac.in>
++
++	Generic Bit Vector Data Flow Analyzer for Gimple IR with
++        example instantiations for several bit vector frameworks	
++	
++	* gcc/Makefile.in: Add target for gimple-pfbvdfa-driver.o,
++	gimple-pfbvdfa-specs.o, gimple-pfbvdfa-support.o
++	* gcc/basic-block.h (basic_block_def): New variable dfs_number
++	* gcc/common.opt: New -fgdfa and -fgdfa-details.
++	* gcc/gimple-pfbvdfa-support.c: New file. 
++	* gcc/gimple-pfbvdfa-driver.c: New file.
++	* gcc/gimple-pfbvdfa-specs.c: New file. Instantiation of gdfa.
++	* gcc/gimple-pfbvdfa.h: New file. Macros, types, external variables
++	and functions for specifying bvdfa.
++	* gcc/passes.c: New passes pass_init_gimple_pfbvdfa,
++	pass_gimple_pfbv_ave_dfa, pass_gimple_pfbv_pav_dfa, 
++	pass_gimple_pfbv_ant_dfa, pass_gimple_pfbv_lv_dfa,
++	pass_gimple_pfbv_pre_dfa.
++	* gcc/tree-cfg.c (create_bb): Intantiate dfs_number to -1.
++	* gcc/tree-pass.h: Define passes as extern.
++	* gcc/tree.h (tree_base): New variable index.
++
++2008-09-11 Seema Ravandale <ravandaless@gmail.com>
++	
++	* ChangeLog.grc: New file.
+diff -Naur gcc-4.3.0/gcc/common.opt gcc-4.3.0/gcc/common.opt
+--- gcc-4.3.0/gcc/common.opt	2008-01-22 19:41:44.000000000 +0530
++++ gcc-4.3.0/gcc/common.opt	2010-03-22 02:00:10.507776166 +0530
+@@ -600,6 +600,14 @@
+ Common Report Var(flag_ipa_pure_const) Init(0) Optimization
+ Discover pure and const functions
+ 
++fgdfa
++Common Report Var(flag_gdfa)  Optimization
++Dump gimple dfa result
++
++fgdfa-details
++Common Report Var(flag_gdfa_details)  Optimization
++Dump detailed gimple dfa result
++
+ fipa-pta
+ Common Report Var(flag_ipa_pta) Init(0) Optimization
+ Perform interprocedural points-to analysis
+diff -Naur gcc-4.3.0/gcc/gimple-pfbvdfa-driver.c gcc-4.3.0/gcc/gimple-pfbvdfa-driver.c
+--- gcc-4.3.0/gcc/gimple-pfbvdfa-driver.c	1970-01-01 05:30:00.000000000 +0530
++++ gcc-4.3.0/gcc/gimple-pfbvdfa-driver.c	2010-03-22 02:00:10.512220586 +0530
+@@ -0,0 +1,1456 @@
++/*
++     gdfa 1.0
++     Copyright (C) 2008 GCC Resource Center, Department of Computer Science and Engineering,
++     Indian Institute of Technology Bombay.
++     License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
++     This is free software: you are free to change and redistribute it.
++     There is NO WARRANTY, to the extent permitted by law.
++*/
++#include "assert.h"
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "tree.h"
++#include "rtl.h"
++#include "tm_p.h"
++#include "hard-reg-set.h"
++#include "basic-block.h"
++#include "output.h"
++#include "errors.h"
++#include "flags.h"
++#include "function.h"
++#include "expr.h"
++#include "ggc.h"
++#include "langhooks.h"
++#include "diagnostic.h"
++#include "tree-flow.h"
++#include "timevar.h"
++#include "tree-dump.h"
++#include "tree-pass.h"
++#include "toplev.h"
++#include "except.h"
++#include "cfgloop.h"
++#include "cfglayout.h"
++#include "hashtab.h"
++#include "gimple-pfbvdfa.h"
++
++#define ASSERT(condition)        assert(condition);
++
++/***    Generic Bit Vector Data Flow Analyzer for Gimple IR with 
++        example instantiations for several bit vector frameworks 
++
++        ( Abbreviations used in the code
++
++         pf = "Per Function", wp = "Whole Program", 
++         bv = "Bit Vector"
++         dfa = "Data Flow Analysis"
++         dfa = "Generic Data Flow Analyzer"
++         dfi = "Data Flow Information"
++
++        )
++
++        This data flow analyzer is an intraprocedural (i.e. "per function")
++        analyzer and hence restricts itself to local variables, expressions,
++        and definitions. More details about this are provided in the associate
++        file gimple-pfdfa-support.c which contains the initialization code.
++
++        This driver computes generic data flow equations of the form
++
++        IN(bb) = MEET_over_preds (forward_edge_flow(OUT(pred_bb))
++                 MEET
++                 backward_node_flow (OUT(bb))
++
++        OUT(bb) = MEET_over_succs (backward_edge_flow(IN(succ_bb))
++                  MEET
++                  forward_node_flow (IN(bb))
++
++        where the node and edge flow functions are of the usual
++          form: f(X) = GEN + (X - KILL).
++
++        In order the instantiate a data flow analysis, one needs to
++
++        - Specify direction of traversal (FORWARD/BACKWARD).
++
++        - Specify confluence operation (INTERSECTION/UNION).
++
++        - Specify the top element of the lattice. This value is used for 
++          initialization.
++
++        - Specify the entry_info/exit_info (data flow value associate with 
++          the ENTRY/EXIT block of the control flow graph).
++
++        - Specify flow functions and associate them with corresponding
++          function pointers. For this purpose, default flow functions
++          ("identity", "gen_kill", and "stop_flow") have been also defined. 
++          Thus the user has to provide only the non-default flow functions. An
++          example of "stop_flow" is the backward node and edge flow functions 
++          in available expressions analysis.
++
++        - Specify the semantics of local properties GEN and KILL.
++          (Details are given below.)
++
++        - Specify whether the driver should return global data flow values
++          only (i.e. IN/OUT), or all data flow values (i.e. IN/OUT/GEN/KILL),
++          or no data flow value.
++
++        These values are specified by initializing a structure variable
++        ("struct gimple_pfbv_dfa_spec"). This file contains specifications
++        for the following bit vector frameworks:
++
++        - Available expressions analysis (ave)
++        - Partially available expressions analysis (pav)
++        - Anticipable expressions analysis (ant)
++        - Live variables analysis (lv)
++        - Partial redundancy elimination (pre)
++
++        The following references are recommended for the generic concepts
++        of data flow analysis:
++        -  Uday P. Khedker, Amitabha Sanyal, and Bageshri Karkare. 
++           "Data Flow Analysis: Theory and Practice". CRC Press, USA 
++           (In preparation, will be available by May 2009).
++        -  Uday P. Khedker. 
++           "Data Flow Analysis". 
++           In "The Compiler Design Handbook : Optimizations & Machine Code Generation." 
++           (1st edition) CRC Press USA. 2002. 
++           (This chapter is now being expanded in a full-fledged book and hence is not 
++            present in the second edition of the Compiler Design Handbook.)
++
++        This implementation also uses some new concepts related to
++        local data flow analysis. In practical optimizers, implementing
++        global data flow analyzers is easier compared to implementing
++        local data flow analyzers. This is because local data flow
++        analysis has to deal with the lower level intricate details of
++        the intermediate representation and intermediate representation
++        are the most complex data structures in practical compilers.
++        Global data flow analyzer are insulated from these lower level
++        details; they just need to know control flow graphs in terms
++        of basic blocks. Thus most data flow analysis engines require
++        leave local property computation to be implemented by the user
++        of the engine.
++
++        In this generic data flow analyzer, local properties are
++        assumed to be GEN and KILL. For computing these properties,
++        rather than writing C code, only their semantics needs to be
++        specified in terms of a combination of suitable values of the
++        following three attributes:
++
++        1. The entity for which data flow analysis is being performed.
++           At the moment, three entities are visualized: Expressions,
++           Variables, and Definitions.
++        2. The effect of a statement on these entities. These could be
++           either the "use" of the entity or its "modification".  We
++           have fixed the usual meanings of these for the above entities.
++        3. Whether these effects are "upwards exposed", "downwards
++           exposed", or "exposition does not matter" in the basic block.  
++           We have fixed the usual meanings of these for the above entities.
++
++
++        As an example, for available expressions analysis, the values of 
++        these attributes are 
++
++        For GEN: "entity = expr", "effect = use", and "exposition = downwards". 
++        For KILL: "entity = expr", "effect = mod", and "exposition = any_where". 
++
++        At the moment, support for definitions has not be implemented but 
++        it is easy to do so. 
++
++        When new entities are supported, two things will have to be done:
++        (a) It will have to be examined whether the other two attributes
++            (effect and exposition) are sufficient or whether a new 
++            attribute needs to be supported. If a new attribute is 
++            required, its possible values will have to be identified.
++        (b) It will have to be examined if additional values of effect
++            and exposition are required.
++        
++        The main limitation of this approach is that it requires
++        independent traversal of a basic block for computing GEN and
++        KILL. However, by using a slightly more complicated data
++        structure that passes both GEN and KILL to the basic block level
++        routines will solve this problem. The other limitation is that
++        due to the generality, there are many checks that are done in
++        the underlying functions. There are two possible options:
++
++        - This is used as a rapid prototyping tool for a given data flow
++          analysis. Once the details are fixed, one could spend time
++          writing a more efficient data flow analyzer.
++        - Instead of "interpreting" the specification, they are
++          compiled into a customized code. In principle, this is
++          similar to "compiling" the machine descriptions using the
++          "gen..." programs into the actual back end code at the time
++          of building GCC.
++           
++     
++        Compile time option "-fdump-tree-all" creates the dump files.
++        Initial and final values are printed by the option
++        "-fgdfa". Values in each iteration are printed by the option
++        "-fgdfa-details".
++
++
++        We suggest the following extensions to gdfa:
++
++        . Extensions that do not require changing the architecture of gdfa
++
++          - include space and time measurement of analyses.
++
++          - Consider scalar formal parameters for analysis.
++
++          - Support a work list based driver.
++
++          - Extend gdfa to support definitions as entities and specify
++            reaching definitions analysis.
++
++          - Extend gdfa to support other entities such as statements
++            (eg. for data flow analysis based program slicing), and
++            basic blocks (eg. for data flow analysis based dominator
++            computation). Both these problems are bit vector problems.
++
++          - Improve the implementation of gdfa to make it more space
++            and time efficient. This may require compromising on the
++            simplicity of the implementation but generality should not
++            be compromised.
++
++        . Extensions that may require minor changes to the architecture of gdfa.
++
++          – Implement incremental data flow analysis and measure its
++            effectiveness by invoking in just before gimple is expanded
++            into RTL. This would require a variant of a work list based
++            driver.
++
++          – Explore the possibility of extending gdfa to the data flow
++            frameworks where data flow information can be represented
++            using bit vectors but the frameworks are not bit vector
++            frameworks because they are nonseparable (eg. faint
++            variables analysis, possibly undefined variables, analysis,
++            strongly live variables analysis).
++
++            This would require changing the local data flow analysis.
++            One possible option is using matrix based local property
++            computation [See Bageshri Karkare's Ph.D. Thesis]. The other
++            option is to treat a statement as an independent basic
++            block.
++
++      . Extensions that may require major changes to the architecture of gdfa.
++
++          - Extend gdfa to non-separable frameworks in which data flow
++            information cannot be represented by bit vectors (eg.
++            constant propagation, signs analysis, points-to analysis,
++            alias analysis, heap reference analysis etc. Although the
++            main driver would remain same, this would require making
++            fundamental changes to the architecture.
++
++          - Extend gdfa to support some variant of context and flow
++            sensitive interprocedural data flow analysis.
++--------------------------------------------------------------------------
++        This code has been implemented by Uday Khedker
++        (www.cse.iitb.ac.in/~uday:uday@cse.iitb.ac.in) with active
++        suggestions from Bageshri Karkare (bageshri@gmail.com). The main
++        data structures in this code, as also the support functions
++        interfacing with GIMPLE IR (in file gimple-pfdfa-support.c) have
++        been adapted from the original code implemented by Seema
++        Ravandale (ravandaless@gmail.com) when she was working at IIT
++        Bombay under IITB Research Fellowship.
++--------------------------------------------------------------------------
++
++***/
++
++
++/************ Generic bit vector data flow analysis driver **************/
++
++
++pfbv_dfi ** gdfa_driver(struct gimple_pfbv_dfa_spec dfa_spec);
++static void perform_pfbvdfa(void);
++static bool compute_in_info(basic_block bb);
++static bool compute_out_info(basic_block bb);
++static dfvalue combined_forward_edge_flow(basic_block bb);
++static dfvalue combined_backward_edge_flow(basic_block bb);
++static void preserve_dfi(dfi_to_be_preserved preserve);
++static void create_dfi_space(void);
++static void initialise_special_values(struct gimple_pfbv_dfa_spec dfa_spec);
++static int find_entity_size(struct gimple_pfbv_dfa_spec dfa_spec);
++
++dfvalue (*forward_edge_flow)(basic_block src, basic_block dest);
++dfvalue (*backward_edge_flow)(basic_block src, basic_block dest);
++dfvalue (*forward_node_flow)(basic_block bb);
++dfvalue (*backward_node_flow)(basic_block bb);
++
++
++/********** Default node and edge flow functions   *************/
++
++dfvalue identity_forward_edge_flow(basic_block src, basic_block dest);
++dfvalue identity_backward_edge_flow(basic_block src, basic_block dest);
++dfvalue identity_forward_node_flow(basic_block bb);
++dfvalue identity_backward_node_flow(basic_block bb);
++dfvalue stop_flow_along_node(basic_block bb);
++dfvalue stop_flow_along_edge(basic_block src, basic_block dest);
++dfvalue forward_gen_kill_node_flow(basic_block bb);
++dfvalue backward_gen_kill_node_flow(basic_block bb);
++
++/********* dfvalue support functions for flow functions ********/
++
++static dfvalue combine (dfvalue value1, dfvalue value2);
++static bool is_new_info(dfvalue prev_info,dfvalue new_info);
++
++/***************  Specification Driven Local Property Computation ***************/
++
++static void local_dfa(struct gimple_pfbv_dfa_spec dfa_spec);
++static dfvalue local_dfa_of_bb(lp_specs lps_given, basic_block bb);
++static dfvalue effect_of_a_statement(lp_specs lps_given, tree stmt, dfvalue accumulated_entities);
++static dfvalue exprs_in_statement(tree stmt, lp_specs lps);
++static dfvalue vars_in_statement(tree stmt, lp_specs lps);
++static dfvalue defn_in_statement(tree stmt, lp_specs lps);
++        
++/************ End of specification driven local property computation ***********/
++
++/************ Top level functions to print the result of data flow analysis   ***********/
++
++static void print_entity_info(void);
++static void print_initial_dfi(void);
++static void print_final_dfi(int count);
++static void print_per_iteration_dfi(int iteration);
++
++/************ Lower level functions to print the result of data flow analysis   ***********/
++
++static void dump_dfi(FILE * file, bool in_iterations);
++static void dump_basic_block_info(FILE * file, basic_block bb);
++static void dump_entity_list(FILE * file, dfvalue value);
++static void dump_entity_mapping(FILE * file);
++
++
++/******************* End of the generic dfa driver    *******************/
++
++
++/**************** miscellaneous   ******************/
++static void verify_allocation_of_dfi(pfbv_dfi **dfi);
++
++extern expr_index_list **exprs_of_vars;
++extern defn_index_list **defns_of_vars;
++extern expr_template **local_expr;
++extern int local_expr_count;
++extern tree * local_var_list;
++extern tree * local_defn_list;
++extern int local_var_count;
++extern int local_defn_count;
++extern int number_of_nodes;
++extern varray_type dfs_ordered_basic_blocks; 
++
++static traversal_direction traversal_order;
++static meet_operation confluence;
++
++static initial_value top_value_spec;
++static dfvalue value_top = NULL;
++static dfvalue entry_info = NULL;
++static dfvalue exit_info = NULL;
++
++int relevant_pfbv_entity_count = 0;
++static entity_name relevant_pfbv_entity;
++
++pfbv_dfi ** current_pfbv_dfi = NULL;
++
++
++extern FILE * dump_file;
++
++
++pfbv_dfi ** 
++gdfa_driver(struct gimple_pfbv_dfa_spec dfa_spec)
++{
++        if (find_entity_size(dfa_spec) == 0)
++                return NULL;
++
++	initialise_special_values(dfa_spec);
++
++        create_dfi_space(); 
++
++        local_dfa(dfa_spec); 
++
++        traversal_order = dfa_spec.traversal_order; 
++        confluence = dfa_spec.confluence;
++
++        forward_edge_flow = dfa_spec.forward_edge_flow;
++        backward_edge_flow = dfa_spec.backward_edge_flow;
++        forward_node_flow = dfa_spec.forward_node_flow;
++        backward_node_flow = dfa_spec.backward_node_flow;
++
++        perform_pfbvdfa();
++
++        preserve_dfi(dfa_spec.preserved_dfi); 
++
++        return current_pfbv_dfi; 
++}
++
++static void
++initialise_special_values(struct gimple_pfbv_dfa_spec dfa_spec)
++{
++        top_value_spec = dfa_spec.top_value_spec;
++
++        value_top = make_initialised_dfvalue(dfa_spec.top_value_spec);
++        entry_info = make_initialised_dfvalue(dfa_spec.entry_info);
++        exit_info = make_initialised_dfvalue(dfa_spec.exit_info); 
++
++}
++
++static int
++find_entity_size(struct gimple_pfbv_dfa_spec dfa_spec)
++{
++        switch (dfa_spec.entity)
++        {        
++                case entity_expr:
++                        relevant_pfbv_entity = entity_expr;
++                        relevant_pfbv_entity_count = local_expr_count;
++                        break;
++                case entity_var:
++                        relevant_pfbv_entity = entity_var;
++                        relevant_pfbv_entity_count = local_var_count;
++                        break;
++                case entity_defn:
++                        relevant_pfbv_entity = entity_defn;
++                        relevant_pfbv_entity_count = local_defn_count;
++                        break;
++                default:
++                        report_dfa_spec_error ("Wrong choice of entity (Function gdfa_driver)");
++                        break;
++        }
++
++	print_entity_info();
++
++        return relevant_pfbv_entity_count;
++}
++
++
++static void 
++perform_pfbvdfa(void)
++{
++        int visit_bb=0, iteration_number=0;
++        basic_block bb;
++        bool change, change_at_in, change_at_out;
++
++	print_initial_dfi(); 
++
++        do{        
++                iteration_number++;
++                change = false;
++                FOR_EACH_BB_IN_SPECIFIED_TRAVERSAL_ORDER  
++                {         
++                        bb = VARRAY_BB(dfs_ordered_basic_blocks,visit_bb);
++                        if(bb)
++                        {        
++                                if (traversal_order == FORWARD)
++                                {
++                                        change_at_in = compute_in_info(bb);
++                                        change_at_out = compute_out_info(bb);
++                                        change = change || change_at_out || change_at_in;
++                                }
++                                else if ((traversal_order == BACKWARD) || (traversal_order == BIDIRECTIONAL))
++                                {
++                                        change_at_out = compute_out_info(bb);
++                                        change_at_in = compute_in_info(bb);
++                                        change = change || change_at_in || change_at_out;
++                                }
++                                else 
++                                         report_dfa_spec_error ("Direction can only be FORWARD, BACKWARD, or BIDIRECTIONAL (Function perform_pfbvdfa)");
++                        }
++                }
++		print_per_iteration_dfi(iteration_number);
++        } while(change);
++
++	print_final_dfi(iteration_number);
++
++}
++
++static bool 
++compute_in_info(basic_block bb)
++{        
++        bool change;
++        dfvalue temp, old;
++
++        temp = make_uninitialised_dfvalue();
++
++        if (!bb->preds)
++                temp = combine(entry_info, backward_node_flow(bb));
++        else
++                temp = combine(combined_forward_edge_flow(bb),
++                                     backward_node_flow(bb));
++                            
++        old = CURRENT_IN(bb);
++        change = is_new_info(temp,old);
++        if (change)
++        {
++                CURRENT_IN(bb) = temp;
++                if (old)
++                        free_dfvalue_space(old);
++        }
++        return change;
++}
++
++static bool 
++compute_out_info(basic_block bb)
++{        
++        bool change;
++        dfvalue temp, old;
++
++        temp = make_uninitialised_dfvalue();
++
++        if (!bb->succs)
++                temp = combine(exit_info, forward_node_flow(bb));
++        else
++                temp = combine(combined_backward_edge_flow(bb),
++                                     forward_node_flow(bb));
++                       
++        old = CURRENT_OUT(bb);
++        change = is_new_info(temp,old);
++        if (change)
++        {
++                CURRENT_OUT(bb) = temp;
++                if (old)
++                        free_dfvalue_space(old);
++        }
++        return change;
++}
++
++
++static dfvalue
++combined_forward_edge_flow(basic_block bb)
++{                
++        dfvalue temp, new;
++        VEC(edge, gc) *edge_vec;
++        edge e;
++        edge_iterator ei;
++        basic_block pred_bb;
++
++        edge_vec = bb->preds;
++        temp = make_initialised_dfvalue(top_value_spec);
++
++        if (forward_edge_flow == &stop_flow_along_edge)
++                return temp;
++        
++        FOR_EACH_EDGE(e,ei,edge_vec)
++        {
++                pred_bb = e->src;
++                new = combine(temp,forward_edge_flow(pred_bb,bb));
++                if (temp)
++                        free_dfvalue_space(temp);
++                temp = new;        
++        }
++        return temp;
++}
++
++static dfvalue
++combined_backward_edge_flow(basic_block bb)
++{                
++        dfvalue temp, new;
++        VEC(edge, gc) *edge_vec;
++        edge e;
++        edge_iterator ei;
++        basic_block succ_bb;
++
++        edge_vec = bb->succs;
++        temp = make_initialised_dfvalue(top_value_spec);
++
++        if (backward_edge_flow == &stop_flow_along_edge)
++                return temp;
++
++        FOR_EACH_EDGE(e,ei,edge_vec)
++        {
++                succ_bb = e->dest;
++                new = combine(temp,backward_edge_flow(bb,succ_bb));
++                if (temp)
++                        free_dfvalue_space(temp);
++                temp = new;        
++        }                
++        return temp;
++}
++
++static void
++preserve_dfi(dfi_to_be_preserved preserve)
++{
++        int iter;
++        
++        switch (preserve)
++        {        
++                case no_value:
++                        for (iter=0; iter < number_of_nodes; iter++)
++                        {                         
++                                if (GEN_nid(current_pfbv_dfi,iter))
++                                {
++                                        free_dfvalue_space(GEN_nid(current_pfbv_dfi,iter));
++                                        GEN_nid(current_pfbv_dfi,iter) =  NULL;
++                                }
++                                if (KILL_nid(current_pfbv_dfi,iter))
++                                {
++                                        free_dfvalue_space(KILL_nid(current_pfbv_dfi,iter));
++                                        KILL_nid(current_pfbv_dfi,iter) = NULL;
++                                }
++                                if (IN_nid(current_pfbv_dfi,iter))
++                                {
++                                        free_dfvalue_space(IN_nid(current_pfbv_dfi,iter));
++                                        IN_nid(current_pfbv_dfi,iter) = NULL;
++                                }
++                                if (OUT_nid(current_pfbv_dfi,iter))
++                                {
++                                        free_dfvalue_space(OUT_nid(current_pfbv_dfi,iter));
++                                        OUT_nid(current_pfbv_dfi,iter) = NULL;
++                                }
++                        }
++                        if (current_pfbv_dfi)
++                                ggc_free(current_pfbv_dfi);
++                        current_pfbv_dfi = NULL;
++                        break;
++                case global_only:
++                        for (iter=0; iter < number_of_nodes; iter++)
++                        {                         
++                                if (GEN_nid(current_pfbv_dfi,iter))
++                                {
++                                        free_dfvalue_space(GEN_nid(current_pfbv_dfi,iter));
++                                        GEN_nid(current_pfbv_dfi,iter) =  NULL;
++                                }
++                                if (KILL_nid(current_pfbv_dfi,iter))
++                                {
++                                        free_dfvalue_space(KILL_nid(current_pfbv_dfi,iter));
++                                        KILL_nid(current_pfbv_dfi,iter) = NULL;
++                                }
++                        }
++                        break;
++
++                case all:
++                        break;
++                
++                default:
++                        report_dfa_spec_error("Wrong choice of values to be preserved (Function preserve_dfi)");
++                        break;
++        }
++}
++
++
++static void
++create_dfi_space(void)
++{
++        int iter;
++
++
++        current_pfbv_dfi = (pfbv_dfi **)ggc_alloc_cleared(sizeof(pfbv_dfi*)*number_of_nodes);
++
++        for (iter=0; iter < number_of_nodes; iter++)
++        {         
++
++                /* We use nid to access DFI because for nid 0 and 1, bb is NULL */
++
++                DFI_nid(current_pfbv_dfi,iter) =  (pfbv_dfi *)ggc_alloc_cleared(sizeof(pfbv_dfi));
++
++                IN_nid(current_pfbv_dfi,iter) =  make_initialised_dfvalue(top_value_spec);
++                OUT_nid(current_pfbv_dfi,iter) =  make_initialised_dfvalue(top_value_spec);
++
++                /* Allocation and initialisation for local properties is
++                   done independently.
++                */
++                GEN_nid(current_pfbv_dfi,iter) =  NULL;
++                KILL_nid(current_pfbv_dfi,iter) =  NULL;
++
++        }
++}
++
++
++/********** Default node and edge flow functions   *************/
++
++dfvalue
++identity_forward_edge_flow(basic_block src, basic_block dest)
++{
++        return CURRENT_OUT(src);
++}
++
++dfvalue
++identity_backward_edge_flow(basic_block src, basic_block dest)
++{
++        return CURRENT_IN(dest);
++}
++
++dfvalue
++identity_forward_node_flow(basic_block bb)
++{
++        return CURRENT_IN(bb);
++}
++
++dfvalue
++identity_backward_node_flow(basic_block bb)
++{
++        return CURRENT_OUT(bb);
++}
++
++dfvalue
++stop_flow_along_node(basic_block bb)
++{
++        return value_top;
++}
++
++dfvalue
++stop_flow_along_edge(basic_block src, basic_block dest)
++{
++        return value_top;
++}
++
++dfvalue
++forward_gen_kill_node_flow(basic_block bb)
++{
++        dfvalue temp;
++
++        temp = make_uninitialised_dfvalue();
++
++	temp = a_plus_b_minus_c(CURRENT_GEN(bb), CURRENT_IN(bb), CURRENT_KILL(bb));
++
++        return temp;
++}
++
++dfvalue
++backward_gen_kill_node_flow(basic_block bb)
++{
++        dfvalue temp;
++
++        temp = make_uninitialised_dfvalue();
++
++	temp = a_plus_b_minus_c(CURRENT_GEN(bb), CURRENT_OUT(bb), CURRENT_KILL(bb));
++
++        return temp;
++}
++
++static dfvalue
++combine (dfvalue value1, dfvalue value2)
++{        
++        dfvalue temp;
++
++
++        if (confluence == INTERSECTION)
++                temp = intersect_dfvalues(value1, value2);
++        else if (confluence == UNION)
++                temp = union_dfvalues(value1, value2);
++        else 
++                 report_dfa_spec_error ("Confluence can only be UNION or INTERSECTION (Function combine)");
++
++        return temp;
++}
++
++static bool
++is_new_info(dfvalue prev_info,dfvalue new_info)
++{
++        if(!(is_dfvalue_equal(prev_info,new_info))) 
++                return true;
++        else return false;
++}
++
++
++/***************  Specification Driven Local Property Computation ***************/
++
++static void
++local_dfa(struct gimple_pfbv_dfa_spec dfa_spec)
++{
++        basic_block bb;
++        int iter;
++        lp_specs gen_lps, kill_lps;
++
++        gen_lps.entity = dfa_spec.entity;
++        gen_lps.stmt_effect = dfa_spec.gen_effect;
++        gen_lps.exposition = dfa_spec.gen_exposition;
++
++        kill_lps.entity = dfa_spec.entity;
++        kill_lps.stmt_effect = dfa_spec.kill_effect;
++        kill_lps.exposition = dfa_spec.kill_exposition;
++
++        for (iter=0; iter < number_of_nodes; iter++)
++        {         
++                bb = VARRAY_BB(dfs_ordered_basic_blocks,iter);
++                if (bb)
++                {        
++                         GEN(current_pfbv_dfi,bb) = local_dfa_of_bb(gen_lps, bb);
++                         KILL(current_pfbv_dfi,bb) = local_dfa_of_bb(kill_lps, bb);
++                }
++                else
++                {        
++                         GEN_nid(current_pfbv_dfi,iter) = make_initialised_dfvalue(ZEROS);
++                         KILL_nid(current_pfbv_dfi,iter) = make_initialised_dfvalue(ZEROS);
++                }
++        }
++}
++
++
++static dfvalue
++local_dfa_of_bb(lp_specs lps_given, basic_block bb)
++{
++        block_stmt_iterator bsi;
++        tree stmt;
++        dfvalue accumulated_entities = NULL;
++
++        accumulated_entities = make_initialised_dfvalue(ZEROS); 
++
++        switch (lps_given.exposition)
++        {       
++                case down_exp:
++                case any_where:
++                        FOR_EACH_STMT_FWD         
++                        {       
++                                stmt = bsi_stmt(bsi);
++                                accumulated_entities = effect_of_a_statement(lps_given, stmt, accumulated_entities);
++                        }
++                        break;
++                case up_exp:
++                        FOR_EACH_STMT_BKD         
++                        {       
++                                stmt = bsi_stmt(bsi);
++                                accumulated_entities = effect_of_a_statement(lps_given, stmt, accumulated_entities);
++                        }
++                        break;
++                default :
++                        report_dfa_spec_error ("Wrong choice of exposition in local property computation (Function local_dfa_of_bb)");
++                        break;
++        }
++        ASSERT (accumulated_entities)
++        return accumulated_entities ; 
++}
++
++
++static dfvalue
++effect_of_a_statement(lp_specs lps_given, tree stmt, dfvalue accumulated_entities)
++{
++        dfvalue add_entities=NULL, remove_entities=NULL;
++        lp_specs lps_temp;        
++
++        switch (lps_given.entity)
++        {        
++                 case entity_expr:
++                        add_entities = exprs_in_statement(stmt, lps_given);
++                        if (lps_given.stmt_effect == entity_use)
++                        {       
++                                lps_temp.entity = lps_given.entity;
++                                lps_temp.exposition = lps_given.exposition;
++                                lps_temp.stmt_effect = entity_mod;
++                                remove_entities = exprs_in_statement(stmt, lps_temp);
++                        }
++                        else 
++                        {
++                                remove_entities = make_initialised_dfvalue(ZEROS); 
++                        }
++                        accumulated_entities=a_plus_b_minus_c(add_entities, accumulated_entities, remove_entities);
++                        break;
++                case entity_var:
++                        add_entities = vars_in_statement(stmt, lps_given);
++                        if (lps_given.stmt_effect == entity_use)
++                        {       
++                                lps_temp.entity = lps_given.entity;
++                                lps_temp.exposition = lps_given.exposition;
++                                lps_temp.stmt_effect = entity_mod;
++                                remove_entities = vars_in_statement(stmt, lps_temp);
++                        }
++                        else 
++                        {
++                                remove_entities = make_initialised_dfvalue(ZEROS); 
++                        }
++                        accumulated_entities=a_plus_b_minus_c(add_entities, accumulated_entities, remove_entities);
++                        break;
++                case entity_defn:
++                        add_entities = defn_in_statement(stmt, lps_given);
++			if (lps_given.stmt_effect == entity_use)
++                        {       
++                                lps_temp.entity = lps_given.entity;
++                                lps_temp.exposition = lps_given.exposition;
++                                lps_temp.stmt_effect = entity_mod;
++                                remove_entities = defn_in_statement(stmt, lps_temp);
++                        }
++                        else 
++                        {
++                                remove_entities = make_initialised_dfvalue(ZEROS); 
++                        }
++			accumulated_entities=a_plus_b_minus_c(add_entities, accumulated_entities, remove_entities);
++                        break;        
++                default :
++                        report_dfa_spec_error ("Wrong choice of entity in local property computation (Function effect_of_statement)");
++                        break;
++        }
++        ASSERT (accumulated_entities)
++        if (add_entities)
++                free_dfvalue_space(add_entities);
++        if (remove_entities)
++                free_dfvalue_space(remove_entities);
++        return accumulated_entities;
++}
++
++/**
++
++Find out those expressions in a given statement that satisfy the local property specification
++
++**/
++
++static dfvalue
++exprs_in_statement(tree stmt, lp_specs lps)
++{       
++        dfvalue temp_Gen=NULL;
++        tree expr=NULL,lval=NULL;
++
++        int expr_index=-1, lval_index=-1;
++        
++        if (lps.entity != entity_expr)
++                 report_dfa_spec_error ("Wrong choice of entity in local property computation (Function exprs_in_statement)");
++
++        temp_Gen = make_initialised_dfvalue(ZEROS);
++
++
++        /* Find the expression occurring in stmt */
++
++        expr = extract_expr(stmt); 
++        expr_index = find_index_of_local_expr(expr);
++
++        /* Find out the l-value of this statement */
++  
++        lval = extract_lval(stmt);
++        lval_index = find_index_of_local_var(lval);
++        
++#if TEST_LOCAL_ANALYSIS
++        printf ("\n\nGiven Statement is ");
++        print_generic_stmt(stdout,stmt,0);
++        printf ("\tRequired Exposition is ");
++
++        switch (lps.exposition)
++        {      
++               case down_exp:
++                        printf ("Downwards\n");
++                       break;
++               case any_where:
++                        printf ("Anywhere\n");
++                        break;
++               case up_exp:
++                        printf ("Upwards\n");
++                       break;
++        }
++#endif
++
++        switch (lps.stmt_effect)
++        {        
++               case entity_use:
++                        if (expr_index != -1)
++                        {       
++                                SET_BIT(temp_Gen,expr_index);
++
++                                /* Reset the bits of the expressions if its operand
++                                      is modified by this statement */
++ 
++                                if(lval_index >=0 && lval_index < local_var_count)
++                                {
++                                        expr_index_list * temp= NULL; 
++                                        for(temp = exprs_of_vars[lval_index];temp;temp=temp->next)
++                                        {
++                                                if (temp->expr_no == expr_index)
++                                                {        
++                                                        switch (lps.exposition)
++                                                        {       
++                                                                case down_exp:
++                                                                case any_where:
++                                                                        RESET_BIT(temp_Gen,temp->expr_no);
++                                                                        break;
++                                                                case up_exp:
++                                                                        break;
++                                                                default:
++                                                                        report_dfa_spec_error ("Wrong choice of occurrence in local property computation (Function exprs_in_statement)");
++                                                                        break;
++                                                        }
++                                                }
++                                        }
++                                }
++                        }
++#if TEST_LOCAL_ANALYSIS
++                        printf ("entity Use. Used entity is \t");
++                        dump_entity_list(stdout,temp_Gen);        
++#endif
++                        break;
++                case entity_mod:
++                        if(lval_index >=0 && lval_index < local_var_count) 
++                        {
++                                expr_index_list * temp= NULL; 
++                                for(temp = exprs_of_vars[lval_index];temp;temp=temp->next)
++                                {
++                                        if (temp->expr_no != expr_index)
++                                                /* These expressions do not appear in this
++                                                   statement but are modified by this 
++                                                   statement.
++                                                */
++                                                SET_BIT(temp_Gen,temp->expr_no);
++                                        else
++                                        {        /* Expression appearing in the statement
++                                                   is included only if we are looking for
++                                                   upwards exposed expressions.
++                                                */
++                                                switch (lps.exposition)
++                                                {        
++                                                        case down_exp:
++                                                        case any_where:
++                                                                SET_BIT(temp_Gen,temp->expr_no);
++                                                                break;
++                                                    
++                                                        case up_exp:
++                                                                break;
++                                                        default:
++                                                                report_dfa_spec_error ("Wrong choice of occurrence in local property computation (Function exprs_in_statement)");
++                                                                break;
++                                                }
++                                        }
++                                }
++                        }
++#if TEST_LOCAL_ANALYSIS
++                        printf ("entity Modification. Modified entity is \t");
++                        dump_entity_list(stdout,temp_Gen);        
++#endif
++                        break;
++                default: 
++                        report_dfa_spec_error ("Wrong entity manipulation in local property computation (Function exprs_in_statement)");
++                        break;
++        }
++        ASSERT (temp_Gen)
++        return temp_Gen;
++}
++
++static dfvalue
++defn_in_statement(tree stmt, lp_specs lps)
++{       
++        dfvalue temp_Gen=NULL;
++        tree defn=NULL,lval=NULL;
++
++        int defn_index=-1, lval_index=-1;
++        
++        if (lps.entity != entity_defn)
++                 report_dfa_spec_error ("Wrong choice of entity in local property computation (Function defn_in_statement)");
++
++        temp_Gen = make_initialised_dfvalue(ZEROS);
++
++
++        /* Find the definition number if statement is definition */
++
++        defn_index = find_index_of_local_defn(stmt);
++
++        /* Find out the l-value of this statement */
++	  
++        lval = extract_lval(stmt);
++        lval_index = find_index_of_local_var(lval);
++        
++        switch (lps.stmt_effect)
++        {        
++               case entity_use:
++                        if (defn_index >= 0 && defn_index < local_defn_count)
++                        {       
++                                SET_BIT(temp_Gen,defn_index);
++
++                                /* Reset the bits of the other definitions of lval */ 
++ 
++                                if(lval_index >=0 && lval_index < local_var_count)
++                                {
++                                        defn_index_list * temp= NULL; 
++                                        for(temp = defns_of_vars[lval_index];temp;temp=temp->next)
++                                        {
++                                                if (temp->defn_no != defn_index && temp->defn_no != -1) 
++                                                {    
++						        
++                                                        switch (lps.exposition)
++                                                        {       
++                                                                case down_exp:
++                                                                case any_where:
++                                                                        RESET_BIT(temp_Gen,temp->defn_no);
++                                                                        break;
++                                                                case up_exp:
++                                                                        break;
++                                                                default:
++                                                                        report_dfa_spec_error ("Wrong choice of occurrence in local property computation (Function defn_in_statement)");
++                                                                        break;
++                                                        }
++						    
++						}
++					}
++                                }
++                        }
++	
++                        break;
++
++                case entity_mod:
++                        if(lval_index >=0 && lval_index < local_var_count) 
++                        {
++                                defn_index_list * temp= NULL; 
++                                for(temp = defns_of_vars[lval_index];temp;temp=temp->next)
++                                {
++                                        if (temp->defn_no != defn_index && temp->defn_no != -1)
++                                                SET_BIT(temp_Gen,temp->defn_no);
++                                 
++                                }
++                        }
++                        break;
++                default: 
++                        report_dfa_spec_error ("Wrong entity manipulation in local property computation (Function defn_in_statement)");
++                        break;
++        }
++        ASSERT (temp_Gen)
++        return temp_Gen;
++}
++
++static dfvalue
++vars_in_statement(tree stmt, lp_specs lps)
++{        
++        dfvalue temp_Gen=NULL;
++        tree expr=NULL, left_opd=NULL, right_opd=NULL, lval=NULL;
++
++        int lval_index=-1, left_opd_index=-1, right_opd_index=-1;
++        
++        if (lps.entity != entity_var)
++                 report_dfa_spec_error ("Wrong choice of entity in local property computation (Function vars_in_statement)");
++
++        temp_Gen = make_initialised_dfvalue(ZEROS);
++
++
++        /* Find out the l-value of this statement */
++  
++        lval = extract_lval(stmt);
++        lval_index = find_index_of_local_var(lval);
++
++
++        /* Find the expression and its variables occurring in stmt */
++        expr = extract_expr(stmt); 
++        if (expr)
++        {
++                left_opd = extract_operand(expr,0);
++                right_opd = extract_operand(expr,1);
++
++                        left_opd_index = find_index_of_local_var(left_opd);
++                        right_opd_index = find_index_of_local_var(right_opd);
++        }
++
++#if TEST_LOCAL_ANALYSIS
++        printf ("\n\nGiven Statement is ");
++        print_generic_stmt(stdout,stmt,0);
++        printf ("\tRequired Exposition is ");
++
++        switch (lps.exposition)
++        {      
++               case down_exp:
++                        printf ("Downwards\n");
++                       break;
++               case any_where:
++                        printf ("Anywhere\n");
++                        break;
++               case up_exp:
++                        printf ("Upwards\n");
++                       break;
++        }
++        printf ("\t Expression is ");
++        print_generic_expr(stdout,expr,0);
++        printf ("\t Its operands are :");
++        print_generic_expr(stdout,left_opd,0);
++        printf ("\t and :");
++        print_generic_expr(stdout,right_opd,0);
++#endif
++
++        
++        switch (lps.stmt_effect)
++        {        
++               case entity_use:
++                        if (left_opd_index != -1)
++                                SET_BIT(temp_Gen,left_opd_index);
++                        if (right_opd_index != -1)
++                                SET_BIT(temp_Gen,right_opd_index);
++                        switch (lps.exposition)
++                        {       
++                                case down_exp:
++                                case any_where:
++                                        if (lval_index != -1)
++                                                RESET_BIT(temp_Gen,lval_index);
++                                break;
++                                case up_exp:
++                                        break;
++                                default:
++                                report_dfa_spec_error ("Wrong choice of occurrence in local property computation (Function vars_in_statement)");
++                                        break;
++                        }
++                        break;
++                case entity_mod:
++                        if (lval_index != -1)
++                                SET_BIT(temp_Gen,lval_index);
++                        switch (lps.exposition)
++                        {        
++                                case down_exp:
++                                case any_where:
++                                        break;
++                                case up_exp:
++                                        if (left_opd_index != -1)
++                                                RESET_BIT(temp_Gen,left_opd_index);
++                                        if (right_opd_index != -1)
++                                                RESET_BIT(temp_Gen,right_opd_index);
++                                        break;
++                                default:
++                                        report_dfa_spec_error ("Wrong choice of occurrence in local property computation (Function vars_in_statement)");
++                                        break;
++                        }
++                        break;
++                default: 
++                        report_dfa_spec_error ("Wrong entity manipulation in local property computation (Function vars_in_statement)");
++                        break;
++        }
++#if TEST_LOCAL_ANALYSIS
++        printf ("\t The identified entities are :");
++        dump_entity_list(stdout,temp_Gen);
++#endif
++        ASSERT (temp_Gen)
++        return temp_Gen;
++}
++
++       
++/************ End of specification driven local property computation ***********/
++
++/************ Functions to print the result of data flow analysis   ***********/
++static void
++dump_dfi(FILE * file, bool in_iterations)
++{
++        basic_block bb;
++
++
++        FOR_EACH_BB(bb)
++        {         
++                dump_basic_block_info(file, bb);
++
++                /* DO not print GEN and KILL during iterations */
++                if (! in_iterations)
++                {
++                        if (GEN(current_pfbv_dfi,bb) == NULL)
++                                fprintf (stderr, "\nBasic Block %d: Null Gen value\n", find_index_bb(bb));
++                        else         
++                        {       
++                                fprintf (file, "\n\t----------------------------");
++                                fprintf (file, "\n\tGEN Bit Vector: ");
++                                dump_dfvalue(file,GEN(current_pfbv_dfi,bb));
++                                fprintf (file, "\tGEN Entities:     ");
++                                dump_entity_list(file,GEN(current_pfbv_dfi,bb));
++                        }
++        
++                        if (KILL(current_pfbv_dfi,bb) == NULL)
++                                fprintf (stderr, "\nBasic Block %d: Null Kill value\n", find_index_bb(bb));
++                        else 
++                        {       
++                                fprintf (file, "\n\t------------------------------");
++                                fprintf (file, "\n\tKILL Bit Vector:");
++                                dump_dfvalue(file,KILL(current_pfbv_dfi,bb));
++                                fprintf (file, "\tKILL Entities:    ");
++                                dump_entity_list(file,KILL(current_pfbv_dfi,bb));
++                        }
++                }        
++
++                /* Print IN and OUT always */
++                if (IN(current_pfbv_dfi,bb) == NULL)
++                        fprintf (stderr, "\nBasic Block %d: Null In value\n", find_index_bb(bb));
++                else 
++                {       
++                        fprintf (file, "\n\t------------------------------");
++                        fprintf (file, "\n\tIN Bit Vector:  ");
++                        dump_dfvalue(file,IN(current_pfbv_dfi,bb));
++                        fprintf (file, "\tIN Entities:      ");
++                        dump_entity_list(file,IN(current_pfbv_dfi,bb));
++                }
++
++                if (OUT(current_pfbv_dfi,bb) == NULL)
++                        fprintf (stderr, "\nBasic Block %d: Null Out value\n", find_index_bb(bb));
++                else 
++                {       
++                        fprintf (file, "\n\t------------------------------");
++                        fprintf (file, "\n\tOUT Bit Vector: ");
++                        dump_dfvalue(file,OUT(current_pfbv_dfi,bb));
++                        fprintf (file, "\tOUT Entities:     ");
++                        dump_entity_list(file,OUT(current_pfbv_dfi,bb));
++                        fprintf (file, "\n\t------------------------------");
++                }
++        }
++}
++
++
++static void
++dump_basic_block_info(FILE * file, basic_block bb)
++{
++        VEC(edge, gc) *edge_vec;
++        edge e;
++        edge_iterator ei;
++        basic_block pred_bb, succ_bb;
++
++        fprintf (file, "\nBasic Block %d. Preds: ",find_index_bb(bb));
++
++        edge_vec = bb->preds;
++        if (!edge_vec)
++                fprintf (file, "None ");
++                
++        else
++        {         
++                FOR_EACH_EDGE(e,ei,edge_vec)
++                {
++                        pred_bb = e->src;
++                        if (pred_bb->index == 0)
++                                fprintf (file, " ENTRY");
++                        else
++                        fprintf (file, " %d",find_index_bb(pred_bb));
++                }        
++        }
++        fprintf (file, ". Succs: ");
++        edge_vec = bb->succs;
++        if (!edge_vec)
++                fprintf (file, "None ");
++                
++        else
++        {         
++                FOR_EACH_EDGE(e,ei,edge_vec)
++                {
++                        succ_bb = e->dest;
++                        if (succ_bb->index == 1)
++                                fprintf (file, " EXIT");
++                        else
++                                fprintf (file, " %d",find_index_bb(succ_bb));
++                }        
++        }
++        
++}
++static void
++dump_entity_list(FILE * file, dfvalue value)
++{        
++        tree expr = NULL;
++        int i;
++        bool at_least_one = false;
++        
++        for (i=0; i<relevant_pfbv_entity_count ; i++)
++        {         
++                if (TEST_BIT(value,i))
++                {        
++                        switch (relevant_pfbv_entity)
++                        {       
++                                case entity_expr:
++                                        expr = local_expr[i]->expr;
++                                        break;
++                                case entity_var:
++                                        expr = local_var_list[i];
++                                        break;
++				case entity_defn:
++					expr = local_defn_list[i];
++					break;
++                                default:
++                                        report_dfa_spec_error("Only expressions,variables,definitions are supported at the moment (Function dump_entity_list)");
++                                        break;
++                        }
++                        if (expr)
++                        {
++                                if (at_least_one)
++                                        fprintf (file, ",(");
++                                else
++                                        fprintf (file, "(");
++                                print_generic_expr(file, expr,0);
++                                fprintf (file, ")");
++                                at_least_one = true;
++                        }
++                }
++        }
++}
++
++static void
++dump_entity_mapping(FILE * file)
++{        
++        tree expr=NULL;
++        int i;
++
++        for (i=0; i<relevant_pfbv_entity_count ; i++)
++        {
++                switch (relevant_pfbv_entity)
++                {       
++                        case entity_expr:
++                                expr = local_expr[i]->expr;
++                                break;
++                        case entity_var:
++                                expr = local_var_list[i];
++                                break;
++			case entity_defn:
++				expr = local_defn_list[i];
++				break;
++                        default:
++                                report_dfa_spec_error("Only expressions,variables and definitions are supported at the moment (Function dump_entity_mapping)");
++                                break;
++                }
++                if (expr)
++                {
++                        if (i)
++                                fprintf (file, ",%d:(",i);
++                        else
++                                fprintf (file, "%d:(",i);
++                        print_generic_expr(file, expr,0);
++                        fprintf (file, ")");
++                }
++        }
++}
++
++static void 
++print_entity_info(void)
++{
++        if (flag_gdfa || flag_gdfa_details)
++        {
++                fprintf(dump_file, "\nNumber of relevant entities: %d\n\t",relevant_pfbv_entity_count);
++                if (relevant_pfbv_entity_count != 0)
++                {
++                        fprintf(dump_file, "\n Bit position and entity mapping is  **************************************\n\t");
++                        dump_entity_mapping(dump_file);
++                        fprintf(dump_file, "\n ");
++                }
++        }
++
++}
++
++static void 
++print_initial_dfi(void)
++{
++        if (flag_gdfa || flag_gdfa_details)
++        {
++                fprintf(dump_file, "\n Initial values ************************\n");
++                dump_dfi(dump_file, false);
++        }
++
++}
++
++static void 
++print_final_dfi(int count)
++{
++        if (flag_gdfa || flag_gdfa_details)
++        {
++                fprintf(dump_file, "\n Total Number of Iterations = %d *******\n",count);
++                fprintf(dump_file, "\n Final values **************************\n");
++                dump_dfi(dump_file, false);
++        }
++
++
++}
++
++static void 
++print_per_iteration_dfi(int iteration)
++{
++        if (flag_gdfa_details)    
++        {
++               fprintf(dump_file, "\n Values after iteration %d *************\n",iteration);
++               dump_dfi(dump_file, true);
++        }
++
++
++}
++
++
++/******************* End of the generic dfa driver    *******************/
++
++
++/*** Just in case this is needed some time :-) ***/
++
++static void
++verify_allocation_of_dfi(pfbv_dfi **dfi) 
++{
++        int iter;
++
++        for (iter=0; iter < number_of_nodes; iter++)
++        {         
++                if (GEN_nid(dfi,iter) == NULL)
++                        fprintf (stderr, "iteration count %d, iter : Null Gen value\n", iter);
++                else if (KILL_nid(dfi,iter) == NULL)
++                        fprintf (stderr, "iteration count %d, iter : Null Kill value\n", iter);
++                else if (IN_nid(dfi,iter) == NULL)
++                        fprintf (stderr, "iteration count %d, iter : Null In value\n", iter);
++                else if (OUT_nid(dfi,iter) == NULL)
++                        fprintf (stderr, "iteration count %d, iter : Null Out value\n", iter);
++                else continue;
++        }
++}
++
+diff -Naur gcc-4.3.0/gcc/gimple-pfbvdfa.h gcc-4.3.0/gcc/gimple-pfbvdfa.h
+--- gcc-4.3.0/gcc/gimple-pfbvdfa.h	1970-01-01 05:30:00.000000000 +0530
++++ gcc-4.3.0/gcc/gimple-pfbvdfa.h	2010-03-22 02:00:10.512220586 +0530
+@@ -0,0 +1,210 @@
++/*
++     gdfa 1.0
++     Copyright (C) 2008 GCC Resource Center, Department of Computer Science and Engineering,
++     Indian Institute of Technology Bombay.
++     License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
++     This is free software: you are free to change and redistribute it.
++     There is NO WARRANTY, to the extent permitted by law.
++*/
++
++
++/*        Macros, types, external variables, and functions for specifying 
++          bit vector data flow analysers. Associated files are 
++          gimple-pfbvdfa-init.c and gimple-pfbvdfa.c
++*/
++
++#define FOR_EACH_BB_FWD(entry_bb)     for(bb=entry_bb->next_bb;bb->next_bb!=NULL;bb=bb->next_bb)
++#define FOR_EACH_BB_BKD(exit_bb)      for(bb=exit_bb->prev_bb;bb->prev_bb!=NULL;bb=bb->prev_bb)
++
++#define FOR_EACH_STMT_FWD         for(bsi=bsi_start(bb);!bsi_end_p(bsi);bsi_next(&bsi))
++#define FOR_EACH_STMT_BKD         for(bsi=bsi_last(bb);bsi.tsi.ptr!=NULL;bsi_prev(&bsi))
++
++
++
++
++typedef struct expr_index_list
++{
++        int expr_no;
++        struct expr_index_list *next;
++}expr_index_list;
++
++typedef struct defn_index_list
++{
++        int defn_no;
++        struct defn_index_list *next;
++}defn_index_list;
++
++
++/*Data structure to store expression template*/
++typedef struct expr_template
++{
++        tree expr;
++        int op0_index;
++        int op1_index;        /* op = VAR_DECL then index of var
++                         else if op = INT_CST then value of INT_CST*/
++} expr_template;
++
++
++#define CURRENT_GEN(bb)   ((current_pfbv_dfi)[find_index_bb(bb)]->gen)
++#define CURRENT_KILL(bb)   ((current_pfbv_dfi)[find_index_bb(bb)]->kill)
++#define CURRENT_IN(bb)   ((current_pfbv_dfi)[find_index_bb(bb)]->in)
++#define CURRENT_OUT(bb)   ((current_pfbv_dfi)[find_index_bb(bb)]->out)
++
++#define DFI_nid(dfi,nid)   (dfi)[nid]
++
++#define GEN_nid(dfi,nid)   ((dfi)[nid]->gen)
++#define KILL_nid(dfi,nid)   ((dfi)[nid]->kill)
++#define IN_nid(dfi,nid)   ((dfi)[nid]->in)
++#define OUT_nid(dfi,nid)   ((dfi)[nid]->out)
++
++
++#define GEN(dfi,bb)   ((dfi)[find_index_bb(bb)]->gen)
++#define KILL(dfi,bb)   ((dfi)[find_index_bb(bb)]->kill)
++#define IN(dfi,bb)   ((dfi)[find_index_bb(bb)]->in)
++#define OUT(dfi,bb)   ((dfi)[find_index_bb(bb)]->out)
++
++#define FOR_EACH_BB_IN_SPECIFIED_TRAVERSAL_ORDER         \
++        for( visit_bb = (traversal_order == FORWARD)?  0 :  number_of_nodes -1 ;\
++            (traversal_order == FORWARD)? visit_bb < number_of_nodes  -1 \
++                                        : visit_bb >=0 ; \
++            (traversal_order == FORWARD)? visit_bb++ \
++                                        : visit_bb-- \
++           )
++
++typedef sbitmap dfvalue;
++
++
++/* Data structure to hold data flow information bit vectors */
++
++typedef struct pfbv_dfi
++{
++        dfvalue gen;
++        dfvalue kill;
++        dfvalue in;
++        dfvalue out;
++} pfbv_dfi;
++
++
++
++typedef enum meet_operation
++                {
++                        UNION=1,
++                        INTERSECTION
++                } meet_operation;
++
++typedef enum traversal_direction 
++                {
++                        FORWARD=1,
++                        BACKWARD,
++                        BIDIRECTIONAL
++                } traversal_direction;
++
++typedef enum initial_value 
++                {
++                        ONES=1, 
++                        ZEROS
++                } initial_value;
++
++typedef enum dfi_to_be_preserved 
++                { 
++                        all=1, 
++                        global_only, 
++                        no_value 
++                } dfi_to_be_preserved;
++
++typedef enum entity_occurrence  
++               { 
++                        up_exp=1, 
++                        down_exp, 
++                        any_where
++               } entity_occurrence;
++
++typedef enum entity_manipulation 
++               { 
++                        entity_use=1, 
++                        entity_mod 
++               } entity_manipulation;
++
++typedef enum entity_name 
++               { 
++                        entity_expr=1, 
++                        entity_var, 
++                        entity_defn
++               } entity_name;
++
++typedef struct lp_specs 
++               {
++                        entity_name entity;
++                        entity_manipulation stmt_effect;
++                        entity_occurrence exposition;
++               } lp_specs;
++
++/* The main data structure for specifying data flow analysis */
++
++struct gimple_pfbv_dfa_spec 
++{
++        entity_name               entity;
++        initial_value             top_value_spec;
++        initial_value             entry_info;
++        initial_value             exit_info;
++        traversal_direction       traversal_order;
++        meet_operation            confluence;
++        entity_manipulation       gen_effect;
++        entity_occurrence         gen_exposition;
++        entity_manipulation       kill_effect;
++        entity_occurrence         kill_exposition;
++        dfi_to_be_preserved       preserved_dfi; 
++
++        dfvalue (*forward_edge_flow)(basic_block src, basic_block dest);
++        dfvalue (*backward_edge_flow)(basic_block src, basic_block dest);
++        dfvalue (*forward_node_flow)(basic_block bb);
++        dfvalue (*backward_node_flow)(basic_block bb);
++
++};
++
++
++/* Main driver function */
++
++
++pfbv_dfi ** pfbvdfa_driver(struct gimple_pfbv_dfa_spec dfa_spec);
++
++/* Default edge flow functions */
++
++dfvalue identity_forward_edge_flow(basic_block src, basic_block dest);
++dfvalue identity_backward_edge_flow(basic_block src, basic_block dest);
++dfvalue stop_flow_along_edge(basic_block src, basic_block dest);
++
++/* Default node flow functions */
++
++dfvalue stop_flow_along_node(basic_block bb);
++dfvalue forward_gen_kill_node_flow(basic_block bb);
++dfvalue backward_gen_kill_node_flow(basic_block bb);
++dfvalue identity_forward_node_flow(basic_block bb);
++dfvalue identity_backward_node_flow(basic_block bb);
++
++/* dfvalue interface  */
++
++bool is_dfvalue_equal(dfvalue value1, dfvalue value2);
++void free_dfvalue_space(dfvalue value);
++dfvalue intersect_dfvalues (dfvalue value1, dfvalue value2);
++dfvalue union_dfvalues (dfvalue value1, dfvalue value2);
++dfvalue a_plus_b_minus_c(dfvalue v_a, dfvalue v_b, dfvalue v_c);
++dfvalue make_initialised_dfvalue(initial_value value);
++dfvalue make_uninitialised_dfvalue(void);
++void dump_dfvalue (FILE * file, dfvalue value);
++
++/* helper functions */
++
++int find_index_bb(basic_block bb);
++void report_dfa_spec_error(const char * mesg);
++tree extract_expr(tree stmt);
++tree extract_lval(tree stmt);
++tree extract_operand(tree expr,int op_num);
++int find_index_of_local_var(tree var);
++int find_index_of_local_expr(tree expr);
++
++/**  End of helper functions **/
++
++extern pfbv_dfi ** current_pfbv_dfi ;
++
++
+diff -Naur gcc-4.3.0/gcc/gimple-pfbvdfa-specs.c gcc-4.3.0/gcc/gimple-pfbvdfa-specs.c
+--- gcc-4.3.0/gcc/gimple-pfbvdfa-specs.c	1970-01-01 05:30:00.000000000 +0530
++++ gcc-4.3.0/gcc/gimple-pfbvdfa-specs.c	2010-03-22 02:00:10.512220586 +0530
+@@ -0,0 +1,422 @@
++/*
++     gdfa 1.0
++     Copyright (C) 2008 GCC Resource Center, Department of Computer Science and Engineering,
++     Indian Institute of Technology Bombay.
++     License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
++     This is free software: you are free to change and redistribute it.
++     There is NO WARRANTY, to the extent permitted by law.
++*/
++
++#include "assert.h"
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "tree.h"
++#include "rtl.h"
++#include "tm_p.h"
++#include "hard-reg-set.h"
++#include "basic-block.h"
++#include "output.h"
++#include "errors.h"
++#include "flags.h"
++#include "function.h"
++#include "expr.h"
++#include "ggc.h"
++#include "langhooks.h"
++#include "diagnostic.h"
++#include "tree-flow.h"
++#include "timevar.h"
++#include "tree-dump.h"
++#include "tree-pass.h"
++#include "toplev.h"
++#include "except.h"
++#include "cfgloop.h"
++#include "cfglayout.h"
++#include "hashtab.h"
++#include "gimple-pfbvdfa.h"
++
++#define ASSERT(condition)        assert(condition);
++
++/***    Instantiations of Generic Bit Vector Data Flow Analyzer for 
++        Gimple IR for
++        - available expressions analysis
++        - partially available expressions analysis
++        - anticipable expressions analysis
++        - live variables analysis
++        - partial redundancy elimination.
++
++
++        For more details, please refer to the documentation in
++        gimple-pfbvdfa-driver.c.
++
++***/
++
++
++/************* Specification of available expressions analysis *****************/
++
++pfbv_dfi ** AV_pfbv_dfi = NULL;
++
++static unsigned int gimple_pfbv_ave_dfa(void);
++
++struct gimple_pfbv_dfa_spec gdfa_ave = 
++{
++        entity_expr,                   /* entity;                 */
++        ONES,                          /* top_value;              */
++        ZEROS,                         /* entry_info;             */
++        ONES,                          /* exit_info;              */
++        FORWARD,                       /* traversal_order;        */
++        INTERSECTION,                  /* confluence;             */
++        entity_use,                    /* gen_effect;             */
++        down_exp,                      /* gen_exposition;         */
++        entity_mod,                    /* kill_effect;            */
++        any_where,                     /* kill_exposition;        */
++        global_only,                   /* preserved_dfi;          */
++        identity_forward_edge_flow,    /* forward_edge_flow       */
++        stop_flow_along_edge,          /* backward_edge_flow      */
++        forward_gen_kill_node_flow,    /* forward_node_flow       */
++        stop_flow_along_node           /* backward_node_flow      */
++};
++
++static unsigned int
++gimple_pfbv_ave_dfa(void)
++{
++
++        AV_pfbv_dfi = gdfa_driver(gdfa_ave);
++
++        return 0;
++}
++
++
++/* This is the specification of ave pass in GCC */
++
++struct tree_opt_pass pass_gimple_pfbv_ave_dfa =
++{
++  "gdfa_ave",                         /* name */
++  NULL,                               /* gate */
++  gimple_pfbv_ave_dfa,                /* execute */
++  NULL,                               /* sub */
++  NULL,                               /* next */
++  0,                                  /* static_pass_number */
++  0,                                  /* tv_id */
++  0,                                  /* properties_required */
++  0,                                  /* properties_provided */
++  0,                                  /* properties_destroyed */
++  0,                                  /* todo_flags_start */
++  0,                                  /* todo_flags_finish */
++  0                                   /* letter */
++};
++
++/********** Specification of partially available expressions analysis **************/
++
++pfbv_dfi ** PAV_pfbv_dfi = NULL;
++
++static unsigned int gimple_pfbv_pav_dfa(void);
++
++struct gimple_pfbv_dfa_spec gdfa_pav = 
++{
++        entity_expr,                   /* entity;                 */
++        ZEROS,                         /* top_value;              */
++        ZEROS,                         /* entry_info;             */
++        ZEROS,                         /* exit_info;              */
++        FORWARD,                       /* traversal_order;        */
++        UNION,                         /* confluence;             */
++        entity_use,                    /* gen_effect;             */
++        down_exp,                      /* gen_exposition;         */
++        entity_mod,                    /* kill_effect;            */
++        any_where,                     /* kill_exposition;        */
++        global_only,                   /* preserved_dfi;          */
++        identity_forward_edge_flow,    /* forward_edge_flow       */
++        stop_flow_along_edge,          /* backward_edge_flow      */
++        forward_gen_kill_node_flow,    /* forward_node_flow       */
++        stop_flow_along_node           /* backward_node_flow      */
++};
++
++static unsigned int
++gimple_pfbv_pav_dfa(void)
++{
++
++        PAV_pfbv_dfi = gdfa_driver(gdfa_pav);
++
++        return 0;
++}
++
++struct tree_opt_pass pass_gimple_pfbv_pav_dfa =
++{
++  "gdfa_pav",                         /* name */
++  NULL,                               /* gate */
++  gimple_pfbv_pav_dfa,                /* execute */
++  NULL,                               /* sub */
++  NULL,                               /* next */
++  0,                                  /* static_pass_number */
++  0,                                  /* tv_id */
++  0,                                  /* properties_required */
++  0,                                  /* properties_provided */
++  0,                                  /* properties_destroyed */
++  0,                                  /* todo_flags_start */
++  0,                                  /* todo_flags_finish */
++  0                                   /* letter */
++};
++
++/************* Specification of anticipable expressions analysis *****************/
++
++pfbv_dfi ** ANT_pfbv_dfi = NULL;
++
++static unsigned int gimple_pfbv_ant_dfa(void);
++
++
++struct gimple_pfbv_dfa_spec gdfa_ant = 
++{
++        entity_expr,                   /* entity;                 */
++        ONES,                          /* top_value;              */
++        ONES,                          /* entry_info;             */
++        ZEROS,                         /* exit_info;              */
++        BACKWARD,                      /* traversal_order;        */
++        INTERSECTION,                  /* confluence;             */
++        entity_use,                    /* gen_effect;             */
++        up_exp,                        /* gen_exposition;         */
++        entity_mod,                    /* kill_effect;            */
++        any_where,                     /* kill_exposition;        */
++        global_only,                   /* preserved_dfi;          */
++        stop_flow_along_edge,          /* forward_edge_flow       */
++        identity_backward_edge_flow,   /* backward_edge_flow      */
++        stop_flow_along_node,          /* forward_node_flow       */
++        backward_gen_kill_node_flow    /* backward_node_flow      */
++};
++
++
++static unsigned int
++gimple_pfbv_ant_dfa(void)
++{
++        ANT_pfbv_dfi = gdfa_driver(gdfa_ant);
++
++        return 0;
++}
++
++struct tree_opt_pass pass_gimple_pfbv_ant_dfa =
++{
++  "gdfa_ant",                         /* name */
++  NULL,                               /* gate */
++  gimple_pfbv_ant_dfa,                /* execute */
++  NULL,                               /* sub */
++  NULL,                               /* next */
++  0,                                  /* static_pass_number */
++  0,                                  /* tv_id */
++  0,                                  /* properties_required */
++  0,                                  /* properties_provided */
++  0,                                  /* properties_destroyed */
++  0,                                  /* todo_flags_start */
++  0,                                  /* todo_flags_finish */
++  0                                   /* letter */
++};
++
++/************* Specification of live variables analysis *****************/
++
++pfbv_dfi ** LV_pfbv_dfi = NULL;
++
++static unsigned int gimple_pfbv_lv_dfa(void);
++
++
++struct gimple_pfbv_dfa_spec gdfa_lv = 
++{
++        entity_var,                   /* entity;                 */
++        ZEROS,                        /* top_value;              */
++        ZEROS,                        /* entry_info;             */
++        ZEROS,                        /* exit_info;              */
++        BACKWARD,                     /* traversal_order;        */
++        UNION,                        /* confluence;             */
++        entity_use,                   /* gen_effect;             */
++        up_exp,                       /* gen_exposition;         */
++        entity_mod,                   /* kill_effect;            */
++        any_where,                    /* kill_exposition;        */
++        global_only,                  /* preserved_dfi;          */
++        stop_flow_along_edge,         /* forward_edge_flow       */
++        identity_backward_edge_flow,  /* backward_edge_flow      */
++        stop_flow_along_node,         /* forward_node_flow       */
++        backward_gen_kill_node_flow   /* backward_node_flow      */
++};
++
++
++static unsigned int
++gimple_pfbv_lv_dfa(void)
++{
++        LV_pfbv_dfi = gdfa_driver(gdfa_lv);
++
++        return 0;
++}
++
++
++struct tree_opt_pass pass_gimple_pfbv_lv_dfa =
++{
++  "gdfa_lv",                          /* name */
++  NULL,                               /* gate */
++  gimple_pfbv_lv_dfa,                 /* execute */
++  NULL,                               /* sub */
++  NULL,                               /* next */
++  0,                                  /* static_pass_number */
++  0,                                  /* tv_id */
++  0,                                  /* properties_required */
++  0,                                  /* properties_provided */
++  0,                                  /* properties_destroyed */
++  0,                                  /* todo_flags_start */
++  0,                                  /* todo_flags_finish */
++  0                                   /* letter */
++};
++
++/************* Specification of partial redundancy elimination *****************/
++
++
++/***  This is the classical bidirectional formulation of  PRE. 
++      The data flow equations are:
++
++        IN(bb) = INTERSECTION_over_preds (AVOUT(pred_bb) UNION OUT(pred_bb))
++                 MEET
++                 (PAVIN(bb) INTERSECTION 
++                  ((OUT(bb) - KILL(bb)) + ANTGEN(b))
++
++        OUT(bb) = INTERSECTION_over_succs (IN(succ_bb))
++
++      Thus, 
++            - forward_node_flow = stop_flow_along_node
++            - backward_edge_flow = identity_backward_edge_flow
++
++      and we need to define 
++
++            - forward_edge_flow because it includes AVOUT also
++            - backward_node_flow because it included PAVIN also
++
++      It is important to ensure that this pass is executed after available
++      expressions analysis and partially available expressions analysis.
++***/
++
++pfbv_dfi ** PRE_pfbv_dfi = NULL;
++
++static unsigned int gimple_pfbv_pre_dfa(void);
++dfvalue forward_edge_flow_pre(basic_block src, basic_block dest);
++dfvalue backward_node_flow_pre(basic_block bb);
++
++
++struct gimple_pfbv_dfa_spec gdfa_pre = 
++{
++        entity_expr,                   /* entity;                 */
++        ONES,                          /* top_value;              */
++        ZEROS,                         /* entry_info;             */
++        ZEROS,                         /* exit_info;              */
++        BACKWARD,                      /* traversal_order;        */
++        INTERSECTION,                  /* confluence;             */
++        entity_use,                    /* gen_effect;             */
++        up_exp,                        /* gen_exposition;         */
++        entity_mod,                    /* kill_effect;            */
++        any_where,                     /* kill_exposition;        */
++        global_only,                   /* preserved_dfi;          */
++        forward_edge_flow_pre,         /* forward_edge_flow       */
++        identity_backward_edge_flow,   /* backward_edge_flow      */
++        stop_flow_along_node,          /* forward_node_flow       */
++        backward_node_flow_pre         /* backward_node_flow      */
++};
++
++
++static unsigned int
++gimple_pfbv_pre_dfa(void)
++{
++        PRE_pfbv_dfi = gdfa_driver(gdfa_pre);
++
++        return 0;
++}
++
++struct tree_opt_pass pass_gimple_pfbv_pre_dfa =
++{
++  "gdfa_pre",                         /* name */
++  NULL,                               /* gate */
++  gimple_pfbv_pre_dfa,                /* execute */
++  NULL,                               /* sub */
++  NULL,                               /* next */
++  0,                                  /* static_pass_number */
++  0,                                  /* tv_id */
++  0,                                  /* properties_required */
++  0,                                  /* properties_provided */
++  0,                                  /* properties_destroyed */
++  0,                                  /* todo_flags_start */
++  0,                                  /* todo_flags_finish */
++  0                                   /* letter */
++};
++
++dfvalue 
++forward_edge_flow_pre(basic_block src, basic_block dest)
++{        
++        dfvalue temp;
++
++        temp = union_dfvalues (OUT(AV_pfbv_dfi,src), CURRENT_OUT(src));
++
++        return temp; 
++}
++
++dfvalue 
++backward_node_flow_pre(basic_block bb)
++{        
++        dfvalue temp1, temp2;
++
++        temp1 = backward_gen_kill_node_flow(bb);
++
++        temp2 = intersect_dfvalues (IN(PAV_pfbv_dfi,bb), temp1);
++
++        if (temp1)
++                free_dfvalue_space(temp1);
++
++        return temp2; 
++}
++
++/************* Specification of Reaching defination analysis *****************/
++
++pfbv_dfi ** RD_pfbv_dfi = NULL;
++
++static unsigned int gimple_pfbv_rd_dfa(void);
++
++struct gimple_pfbv_dfa_spec gdfa_rd = 
++{
++        entity_defn,                   /* entity;                 */
++        ZEROS,                         /* top_value;              */
++        ZEROS, 			       /* entry_info;             */
++        ZEROS,                         /* exit_info;              */
++        FORWARD,                       /* traversal_order;        */
++        UNION,                         /* confluence;             */
++        entity_use,                    /* gen_effect;             */
++        down_exp,                      /* gen_exposition;         */
++        entity_mod,                    /* kill_effect;            */
++        any_where,                     /* kill_exposition;        */
++        global_only,                   /* preserved_dfi;          */
++        identity_forward_edge_flow,    /* forward_edge_flow       */
++        stop_flow_along_edge,          /* backward_edge_flow      */
++        forward_gen_kill_node_flow,    /* forward_node_flow       */
++        stop_flow_along_node           /* backward_node_flow      */
++};
++
++static unsigned int
++gimple_pfbv_rd_dfa(void)
++{
++
++        RD_pfbv_dfi = gdfa_driver(gdfa_rd);
++
++        return 0;
++}
++
++
++/* This is the specification of rd (Reaching defination) pass in GCC */
++
++struct tree_opt_pass pass_gimple_pfbv_rd_dfa =
++{
++  "gdfa_rd",                          /* name */
++  NULL,                               /* gate */
++  gimple_pfbv_rd_dfa,                 /* execute */
++  NULL,                               /* sub */
++  NULL,                               /* next */
++  0,                                  /* static_pass_number */
++  0,                                  /* tv_id */
++  0,                                  /* properties_required */
++  0,                                  /* properties_provided */
++  0,                                  /* properties_destroyed */
++  0,                                  /* todo_flags_start */
++  0,                                  /* todo_flags_finish */
++  0                                   /* letter */
++};
++
+diff -Naur gcc-4.3.0/gcc/gimple-pfbvdfa-support.c gcc-4.3.0/gcc/gimple-pfbvdfa-support.c
+--- gcc-4.3.0/gcc/gimple-pfbvdfa-support.c	1970-01-01 05:30:00.000000000 +0530
++++ gcc-4.3.0/gcc/gimple-pfbvdfa-support.c	2010-03-22 02:00:10.515726548 +0530
+@@ -0,0 +1,1111 @@
++/*
++     gdfa 1.0
++     Copyright (C) 2008 GCC Resource Center, Department of Computer Science and Engineering,
++     Indian Institute of Technology Bombay.
++     License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
++     This is free software: you are free to change and redistribute it.
++     There is NO WARRANTY, to the extent permitted by law.
++*/
++
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "vec.h"
++#include "tree.h"
++#include "rtl.h"
++#include "tm_p.h"
++#include "hard-reg-set.h"
++#include "basic-block.h"
++#include "output.h"
++#include "errors.h"
++#include "flags.h"
++#include "function.h"
++#include "expr.h"
++#include "ggc.h"
++#include "langhooks.h"
++#include "diagnostic.h"
++#include "tree-flow.h"
++#include "timevar.h"
++#include "tree-dump.h"
++#include "tree-pass.h"
++#include "toplev.h"
++#include "except.h"
++#include "cfgloop.h"
++#include "cfglayout.h"
++#include "hashtab.h"
++#include "cgraph.h" 
++#include "assert.h" 
++#include "gimple-pfbvdfa.h"
++
++/* This file contains the initialization required for performing
++   per function (i.e. intraprocedural) data flow analysis on gimple IR
++   which has been defined in the file gimple-pfbvdfa-driver.c.
++   
++   This file contains the following modules:
++        - functions for assigning unique indices to local expressions and 
++          variables so that these can be used for bit positions in bit vector 
++          representation of data flow properties.
++        - functions for performing dfs numbering of the control flow graph
++        - functions for accessing gimple IR
++
++  For more details about data flow analysis, please see the documentation
++  in the file gimple-pfbvdfa-driver.c.
++
++*/
++
++typedef enum eopdT 
++                { 
++                     op_in_var_decl=1,
++                     op_is_int_constant
++                } expr_op_type;
++
++typedef enum varT  
++                {  
++                      locally_scoped_var=1,
++                      globally_scoped_var,
++                      artificial_var,
++                      temporary_var,
++                      uninteresting_var_type
++                } var_scope;
++
++typedef enum defnT  
++                {  
++                      locally_scoped_defn=1,
++                      globally_scoped_defn,
++                      artificial_defn,
++                      temporary_defn,
++                      uninteresting_defn_type
++                } defn_scope;
++
++
++#define LOCALISED_VERSION(var)  DECL_IGNORED_P ((var)) == 1 && \ 
++				DECL_ARTIFICIAL((var)) == 1 && \
++                              	DECL_SEEN_IN_BIND_EXPR_P((var)) == 1  && \
++                                DECL_NAME((var))
++
++#define GROW_STEP 10
++
++#define ENTITY_INDEX(node) (node).common.base.index
++
++/*initial allocation of memory while storing expressions */
++int e_old_size_local=1000,e_new_size_local=100;
++
++/*initial allocation of memory while storing variables */
++int v_old_size_local=1000,v_new_size_local=100;
++
++/*initial  allocation of memory while storing definitions */
++int d_old_size_local=1000,d_new_size_local=100;	
++
++/* Count of local entities */
++int local_var_count=0;
++int local_expr_count=0;
++int local_defn_count=0;
++int number_of_nodes=0;
++
++expr_template **local_expr=NULL;
++expr_index_list **exprs_of_vars=NULL;
++
++ /* local_var_list, we are storing temporarily for a function under 
++ * compilation, used to assign indices to local copies of local variable*/
++
++tree * local_var_list=NULL;
++tree * local_defn_list=NULL;
++defn_index_list **defns_of_vars=NULL;
++
++varray_type dfs_ordered_basic_blocks = NULL; 
++basic_block * stack_bb=NULL;
++
++/**  Functions to assign indices to local expressions, variables, and definitions **/
++
++static void assign_indices_to_var(void);
++static void assign_indices_to_exprs(void);
++static void assign_indices_to_local_expr(tree expr);
++static void assign_indices_to_defn();
++
++static void create_add_node_expr_index_list( int expr_index, expr_index_list **list,int index);
++static expr_index_list* create_node_expr_index_list(int expr_index);
++static void add_to_list_expr(expr_index_list **list_head,int var,expr_index_list * temp_node);
++
++static void create_add_node_defn_index_list(int defn_index, defn_index_list **list,int index);
++static defn_index_list* create_node_defn_index_list(int defn_index);
++static void add_to_list_defn(defn_index_list **list_head,int var,defn_index_list * temp_node);
++
++static signed int index_of_operand(tree operand);
++static bool is_expr_in_template(expr_template **template, int iter, tree expr, tree op0, tree op1);
++static void validate_expr_index_list(void);
++
++
++/**  Functions to perform depth first numbering of gimple cfg  **/
++
++static varray_type add_to_varray_bb(varray_type to_varray, basic_block bb, int index);
++static void dfs_numbering_of_bb(void);
++static void dfs_numbering_of_bb_inner(basic_block bb);
++static void init_stack(int number_of_elements);
++static bool is_empty_stack_bb(void);
++static bool is_full_stack_bb(void);
++static void push_bb(basic_block bb);
++static basic_block pop_bb(void);
++
++/**  Accessor functions for entities in gimple IR **/
++static var_scope type_of_var(tree var);
++static bool is_local_expr(tree expr);
++static bool is_valid_expr(tree expr);
++static char * extract_string(tree var);
++static defn_scope type_of_defn(tree defn);
++static bool is_valid_defn(tree stmt);
++static bool is_global_var_grc (tree var);
++
++static unsigned int
++init_gimple_pfbvdfa_execute (void)
++{
++        local_var_count=0;
++        local_expr_count=0;
++	local_defn_count=0;
++        number_of_nodes = n_basic_blocks;
++
++        assign_indices_to_var();
++        assign_indices_to_exprs();
++	assign_indices_to_defn();
++
++        dfs_ordered_basic_blocks = NULL; 
++        dfs_numbering_of_bb();
++        
++        return 0;
++}
++
++struct tree_opt_pass pass_init_gimple_pfbvdfa =
++{
++  "init_gimple_pfbvdfa",                   /* name */
++  NULL,                                    /* gate */
++  init_gimple_pfbvdfa_execute,             /* execute */
++  NULL,                                    /* sub */
++  NULL,                                    /* next */
++  0,                                       /* static_pass_number */
++  0,                                       /* tv_id */
++  0,                                       /* properties_required */
++  0,                                       /* properties_provided */
++  0,                                       /* properties_destroyed */
++  0,                                       /* todo_flags_start */
++  0,                                       /* todo_flags_finish */
++  0                                        /* letter */
++};
++
++
++/**  Functions to assign indices to local expressions, variables, and definitions **/
++
++
++static void 
++assign_indices_to_var(void)
++{
++        tree vars,list;
++        char * var_name,*position_ptr=NULL,*var_temp=NULL;
++        size_t position=0;
++
++        /*data structure to store all expression templates */
++        local_var_list = (tree *)ggc_alloc_cleared(sizeof(tree )*v_old_size_local);
++
++        list = cfun->unexpanded_var_list;
++        while (list) 
++        {
++                if(local_var_count == v_old_size_local)
++                {
++                        v_old_size_local += v_new_size_local;
++                        local_var_list =(tree *) ggc_realloc(local_var_list,sizeof(tree )*v_old_size_local);
++                }
++                vars = TREE_VALUE (list);
++
++                switch(type_of_var(vars))
++                {
++                        case locally_scoped_var: /*pure local variable*/
++                                        ENTITY_INDEX(vars->decl_minimal) = local_var_count;
++                                        local_var_list[local_var_count++] = vars;
++                                break;
++
++                        /* Since temporary variables are not reused,
++                           there is exactly one use of a temporary
++                           variable so the expression using this
++                           variable cannot undergo a traditional
++                           optimization like common subexpressions
++                           elimination. Hence we do not assign indices
++                           to temporaries. An artificial variable is a
++                           clone of a global variable, or of a local
++                           variable that gets its value from outside.
++                           If it is a clone of a local variable, its
++                           value is copied to the local variable and
++                           the expressions using the value use local
++                           variables. Thus an artificial variable
++                           appears in an expression only when it
++                           represents a global variable and we are
++                           keeping global variables out of the scope of
++                           our data flow analyzers.
++                         */
++                          
++                        case temporary_var: 
++                        case artificial_var:
++                        case globally_scoped_var:
++			case uninteresting_var_type:
++                                ENTITY_INDEX(vars->decl_minimal) = -1;
++                                break;
++                        default:
++                                report_dfa_spec_error ("Which type of variable is this? (Function assign_indices_to_var)");
++                                       break; 
++
++                }
++                list = TREE_CHAIN(list);
++        }
++}
++
++
++static void
++create_add_node_expr_index_list( int expr_index, expr_index_list **list,int index)
++{
++        expr_index_list *temp=NULL;
++        temp=(expr_index_list*)ggc_alloc_cleared(sizeof(expr_index_list));
++        temp->expr_no = expr_index;
++        temp->next = NULL;
++
++        if(list[index]==NULL)
++                list[index] = temp;
++        else
++        {
++                temp->next = list[index];
++                list[index]=temp;
++        }
++
++}        
++
++static void
++create_add_node_defn_index_list( int defn_index, defn_index_list **list,int index)
++{
++        defn_index_list *temp=NULL;
++        temp=(defn_index_list*)ggc_alloc_cleared(sizeof(defn_index_list));
++        temp->defn_no = defn_index;
++        temp->next = NULL;
++
++        if(list[index]==NULL)
++                list[index] = temp;
++        else
++        {
++                temp->next = list[index];
++                list[index]=temp;
++        }
++
++}        
++
++static signed int 
++index_of_operand(tree operand)
++{
++        switch(TREE_CODE(operand))
++        {
++                case VAR_DECL:
++                        return ENTITY_INDEX(*(operand));
++                case INTEGER_CST:
++                        return operand->int_cst.int_cst.low;
++                default:
++                        return -1;
++        }
++}
++
++static bool 
++is_expr_in_template(expr_template **template, int iter, tree expr, tree op0, tree op1)
++{
++        bool flag=false;
++
++        int op0_indx = index_of_operand(op0);
++        int op1_indx = index_of_operand(op1);
++
++        if(template[iter])
++        {
++        if((TREE_CODE(template[iter]->expr)== TREE_CODE(expr)) && (template[iter]->op0_index == op0_indx) &&(template[iter]->op1_index == op1_indx))
++                flag = true;
++        }
++
++        return flag;
++}
++
++
++static void 
++assign_indices_to_local_expr(tree expr)
++{
++
++        tree op0,op1;
++
++
++        int iter_local_expr=0;
++        signed int op0_index=-1;
++        signed int op1_index=-1; 
++
++        op0 = extract_operand(expr,0);
++        op1 = extract_operand(expr,1);
++
++        /* First find out if we have already assigned an index to this expr */
++        for(iter_local_expr=0;iter_local_expr<local_expr_count;iter_local_expr++)
++        {
++
++                bool cmp_expr =  is_expr_in_template( local_expr,iter_local_expr,expr,op0,op1);
++                        
++                /*if expr is in array local_expr, do nothing*/ 
++                if(cmp_expr)
++                {
++                        ENTITY_INDEX(*expr) = iter_local_expr;
++                        return;
++                }
++         }
++
++        /* This is a new expression that needs to be assigned an index */
++        /* We need to store it in the array*/
++              
++        /* First check if there is a need to dynamically increase the 
++           allocated size of the array that remembers expressions. */
++        if(local_expr_count == e_old_size_local)
++        {
++                e_old_size_local += e_new_size_local;
++                local_expr =(expr_template**) ggc_realloc(local_expr,sizeof(expr_template*)*e_old_size_local);
++        }
++                        
++        if(iter_local_expr == local_expr_count)
++        {
++                local_expr[local_expr_count] = NULL;
++                local_expr[local_expr_count] =(expr_template*)ggc_alloc_cleared(sizeof(expr_template));
++                local_expr[local_expr_count]->expr = expr;
++                                                        
++                switch(TREE_CODE(op0))
++                {
++                        case VAR_DECL:
++                                local_expr[local_expr_count]->op0_index = op0_index = ENTITY_INDEX(op0->decl_minimal);        
++                                break;
++
++                        case INTEGER_CST:
++                                op0_index = -1;
++                                /* store the value of int constant at op1_index field */        
++                                local_expr[local_expr_count]->op0_index = TREE_INT_CST_LOW(op0);
++                                break;
++
++                        default:
++                                break;
++                }
++
++                switch(TREE_CODE(op1))
++                {
++                        case VAR_DECL:
++                                local_expr[local_expr_count]->op1_index = op1_index = ENTITY_INDEX(op1->decl_minimal);
++                                break;
++                        case INTEGER_CST:
++                                op1_index = -1;
++                                /* store the value of int constant at op1_index field */        
++                                local_expr[local_expr_count]->op1_index = TREE_INT_CST_LOW(op1);
++                                break;
++
++                        default:
++                                break;
++
++                }
++                int expr_index=-1;
++
++                expr_index = ENTITY_INDEX(*expr) = local_expr_count++;                        
++
++                /*add expr to expr_index_list of the variables used in expr*/
++                if(op0_index!= -1)        
++                 create_add_node_expr_index_list(expr_index,exprs_of_vars,op0_index);
++                if(op1_index!= -1)
++                 create_add_node_expr_index_list(expr_index,exprs_of_vars,op1_index);
++        }
++                                                
++}
++
++static void 
++assign_indices_to_exprs(void)
++{
++        basic_block bb;
++        block_stmt_iterator bsi;
++        int type,iter,tempo;
++
++        tree stmt;
++        tree expr,op0,op1;
++                
++
++        /*data structure to store all expression templates */
++        local_expr = (expr_template**)ggc_alloc_cleared(sizeof(expr_template*)*e_old_size_local);
++
++
++        /*data structure to accumulate expressions of a given variable */
++
++        exprs_of_vars  =(expr_index_list**)ggc_alloc_cleared(sizeof(*exprs_of_vars)*local_var_count);
++     
++        
++        FOR_EACH_BB_FWD(ENTRY_BLOCK_PTR)
++        {
++                int logical_stmt_no =0;
++                FOR_EACH_STMT_FWD
++                {
++                        stmt = bsi_stmt(bsi);
++                        logical_stmt_no++;
++
++                        expr = extract_expr(stmt);
++                        if(expr)
++                        {
++                                if(is_local_expr(expr))
++                                        assign_indices_to_local_expr(expr);
++                                else         /* assign index as -1 */
++                                        ENTITY_INDEX(*expr) = -1;
++                        }
++                }/* for loop of BSI(stmt)*/
++        }/*For loop for bb*/
++        
++}
++
++static void 
++assign_indices_to_defn(void)
++{
++	basic_block bb;
++        block_stmt_iterator bsi;
++	int index;
++        defn_scope type;
++        tree stmt=NULL,lval=NULL;
++
++	/*data structure to store all definitions*/ 
++        local_defn_list = (tree *)ggc_alloc_cleared(sizeof(tree )*d_old_size_local);
++
++        /*data structure to accumulate definitions of a given variable */
++        defns_of_vars  =(defn_index_list**)ggc_alloc_cleared(sizeof(*defns_of_vars)*local_var_count);
++ 
++        FOR_EACH_BB_FWD(ENTRY_BLOCK_PTR)
++        {
++                int logical_stmt_no =0;
++                FOR_EACH_STMT_FWD
++                {
++                        stmt = bsi_stmt(bsi);
++                        logical_stmt_no++;
++
++                        if(is_valid_defn(stmt))
++			{	
++				if(local_defn_count == d_old_size_local)
++		                {
++                	   		d_old_size_local += d_new_size_local;
++                        		local_defn_list =(tree *) ggc_realloc(local_defn_list,sizeof(tree )*d_old_size_local);
++                		}
++
++				type = type_of_defn(stmt);
++				switch (type)
++				{
++					case locally_scoped_defn:
++						ENTITY_INDEX(*stmt) = local_defn_count;
++						local_defn_list[local_defn_count] = stmt;
++						lval = extract_operand(stmt,0);
++						index = ENTITY_INDEX(*lval);
++						create_add_node_defn_index_list(local_defn_count,defns_of_vars,index);
++						local_defn_count++;
++
++						break;
++
++					case globally_scoped_defn:
++			                case artificial_defn:
++                      			case temporary_defn:
++					case uninteresting_defn_type:
++						ENTITY_INDEX(*stmt) = -1;
++						break;
++
++					default:
++				                report_dfa_spec_error ("Which type of definition is this? (Function assign_indices_to_defn)");
++						break;
++				}	
++			}
++			
++		}/* for loop of BSI(stmt)*/
++        }/*For loop for bb*/
++    
++}
++
++static void
++validate_expr_index_list(void)
++{
++        expr_index_list * temp = NULL;
++        int iter;
++        for(iter=0;iter<local_var_count;iter++)
++        {
++                for(temp = exprs_of_vars[iter] ;temp;temp=temp->next)
++                {
++                        printf(" %d ",temp->expr_no);
++                }
++                
++        }
++}
++
++/**  End of functions to assign indices to local expressions, variables, and definitions **/
++
++/**  Functions to perform depth first numbering of gimple cfg  **/
++
++/* Traverse CFG in dfs manner and assign DFS numbers 
++ * and store in an array dfs_num a block pointers
++ * so dfs_num[i] = node says that dfs number of node is i;
++ *
++ * for a forward traversal 
++ * for (i=0;i<maxdfs;i++)
++ *  node = dfs_num[i]
++ *
++ *  and backward
++ *
++ * for (i=maxdfs-1 ;i>= 0;i--)
++ *  node = dfs_num[i]
++ * we will store basic_blocks in dfs_numbered manner in varray dfs_ordered_basic_blocks
++*/
++
++static int dfs_num=0;
++static int *visit_dfs=NULL;
++
++static varray_type 
++add_to_varray_bb(varray_type to_varray, basic_block bb, int index)
++{
++        if(to_varray->elements_used == to_varray->num_elements)
++                        {
++                               int new_size = to_varray->num_elements + GROW_STEP;
++                                VARRAY_GROW(to_varray,new_size);
++                                to_varray->num_elements=new_size;
++                        }
++
++                        VARRAY_BB(to_varray,index) = bb;
++                        to_varray->elements_used++;
++                        return to_varray;
++}
++
++
++static void
++dfs_numbering_of_bb(void)
++{
++                VARRAY_BB_INIT (dfs_ordered_basic_blocks, number_of_nodes, "dfs_ordered_bb");
++                visit_dfs = (int*)ggc_alloc_cleared(sizeof(int)*number_of_nodes);
++                init_stack(number_of_nodes);
++                dfs_num = number_of_nodes;
++                basic_block bb = ENTRY_BLOCK_PTR;
++
++#if NON_RECURSIVE_DFS
++                push_bb(bb); visit_dfs[bb->index]=1; 
++#endif
++                dfs_numbering_of_bb_inner(bb);
++                visit_dfs = NULL;
++                stack_bb = NULL;
++}
++
++#if NON_RECURSIVE_DFS
++static void 
++dfs_numbering_of_bb_inner(basic_block bb) /*non recursive one*/
++{
++
++        edge_iterator ei ;
++        edge e ;
++        basic_block succ_bb=NULL;
++        int bb_index; 
++        
++        push_bb(bb);
++        bb_index = find_index_bb(bb);
++        visit_dfs[bb_index]=1; 
++
++        do{
++                ei = ei_start(bb->succs);
++                for(;e=ei_safe_edge(ei);ei_next(&ei))
++                {
++                        succ_bb = e->dest;
++                        bb_index = find_index_bb(succ_bb);
++                        if(!visit_dfs[bb_index] && !(succ_bb->dfs_number >= 0 && succ_bb->dfs_number<number_of_nodes) )
++                        {
++                                push_bb(succ_bb);
++                                visit_dfs[bb_index]=1;
++                                bb = succ_bb;
++                                ei = ei_start(bb->succs);
++                        }
++                }
++        
++                bb = pop_bb();
++                VARRAY_BB(dfs_ordered_basic_blocks,--dfs_num) = bb;
++                bb->dfs_number = dfs_num;
++                bb_index = find_index_bb(bb);
++                visit_dfs[bb_index] = 0;
++                
++        }while(!is_empty_stack_bb());
++}
++
++#else 
++
++static void 
++dfs_numbering_of_bb_inner(basic_block bb) /* Recursive version */
++{
++
++        edge_iterator ei ;
++        edge e ;
++        basic_block succ_bb=NULL;
++
++        visit_dfs[bb->index] = 1;
++
++
++        FOR_EACH_EDGE(e,ei,bb->succs)
++        {
++                succ_bb = e->dest;
++                if(!visit_dfs[succ_bb->index])
++                dfs_numbering_of_bb_inner(succ_bb);
++        }
++
++        VARRAY_BB(dfs_ordered_basic_blocks,--dfs_num) = bb;
++        bb->dfs_number = dfs_num;
++
++}
++#endif
++
++static signed int bb_stack_top=-1;
++
++static void
++init_stack(int number_of_elements)
++{
++        stack_bb = NULL;
++        stack_bb = (basic_block*)ggc_alloc_cleared(sizeof(basic_block)*number_of_elements);
++        bb_stack_top = -1;
++}
++static bool
++is_empty_stack_bb(void)
++{
++        if(bb_stack_top == -1)
++        return true;
++        else
++        return false;
++}
++static bool
++is_full_stack_bb(void)
++{
++        if(bb_stack_top == number_of_nodes-1)
++        return true;
++        else
++        return false;
++}
++static void
++push_bb(basic_block bb)
++{
++        if(!is_full_stack_bb())
++        {
++                stack_bb[++bb_stack_top]=bb;
++        }
++}
++
++static basic_block
++pop_bb(void)
++{
++        basic_block bb;
++        if(!is_empty_stack_bb())
++        {
++                bb = stack_bb[bb_stack_top];
++                bb_stack_top--;        
++        }
++        else 
++                bb = NULL;
++
++        return bb;
++}
++
++int
++find_index_bb(basic_block bb)
++{
++                int nid = -1;
++                if (bb->index >=0 && bb->index < n_basic_blocks)
++                         nid = bb->index;
++                else 
++	                report_dfa_spec_error ("Wrong index of basic block (Function find_index_bb)");
++                return nid;
++}
++
++
++/**  End of functions to perform depth first numbering of gimple cfg  **/
++
++/**  Accessor functions for entities in gimple IR **/
++
++static var_scope
++type_of_var(tree var)
++{
++      if(TREE_CODE(var) == VAR_DECL) 
++      {	
++        if(var->decl_minimal.name == NULL)
++                return temporary_var;
++        else if (LOCALISED_VERSION(var)) 
++        {
++		/*variable is local copy of some global variable
++		or local copy of local variable. This includes
++		versions such as c.0 for local var c also.
++		*/
++		return artificial_var;
++	}        
++	else if (is_global_var_grc(var))  
++		return globally_scoped_var;
++	else 	/* if not local version of global var and not temporary var then pure local variable*/
++		return locally_scoped_var;
++      }
++      else
++	return uninteresting_var_type;
++
++}
++
++/* This function has given "grc" suffix, because is_global_var function is already provided by
++ * GCC, but it return true on static_flag, which could be true for static local variables. */
++ 
++static bool
++is_global_var_grc (tree var)
++{
++	bool return_value = false;
++	return_value = ( TREE_STATIC(var)==1 && 
++			 TREE_PUBLIC(var)==1 && 
++			 DECL_SEEN_IN_BIND_EXPR_P(var)==0);
++			/* Even check on context field which is NULL for global 
++			variable can be added */
++	return return_value;
++}
++
++static bool
++is_local_expr(tree expr)
++{
++        tree op0,op1;
++        op0 = extract_operand(expr,0);
++        op1 = extract_operand(expr,1);
++
++
++        if(TREE_CODE(op0) == INTEGER_CST)
++        {
++        
++                if (ENTITY_INDEX(*op1) != -1 )
++                        return true;
++                else 
++                        return false;
++        }
++
++        if(TREE_CODE(op1) == INTEGER_CST)
++        {
++                if (ENTITY_INDEX(*op0) != -1 )
++                        return true;
++                else 
++                        return false;
++        }
++        
++        if(TREE_CODE(op0) == VAR_DECL && TREE_CODE(op1) == VAR_DECL)
++        {
++                if ((ENTITY_INDEX(*op0) != -1 ) && (ENTITY_INDEX(*op1) != -1 ))
++                        return true;
++                else 
++                        return false;
++        }
++        else
++               return false;
++}
++
++
++int
++find_index_of_local_var(tree var)
++{        
++        int index=-1;        
++
++        if (var)
++        {        
++                if((TREE_CODE(var) == VAR_DECL) && (ENTITY_INDEX(*var) != -1 ))
++                        index = ENTITY_INDEX(*var);
++        }
++        return index;
++}
++
++int
++find_index_of_local_expr(tree expr)
++{       
++        int index=-1;        
++
++        if (expr)
++        {        
++                if (is_local_expr(expr))
++                        index = ENTITY_INDEX(*expr);
++        }
++        return index;
++}
++
++int 
++find_index_of_local_defn(tree defn)
++{
++	int index=-1;
++	if(defn && is_valid_defn(defn))
++	{
++		if(type_of_defn(defn) == locally_scoped_defn)
++		index = ENTITY_INDEX(*defn);
++	}
++	
++	return index;
++}
++static bool
++is_valid_expr(tree expr)
++{
++        bool valid;
++
++        tree op0,op1;
++
++
++        switch(TREE_CODE(expr))
++        { 
++                case MULT_EXPR:
++                case PLUS_EXPR:
++                case MINUS_EXPR:
++                case LT_EXPR:
++                case LE_EXPR:
++                case GT_EXPR:
++                case GE_EXPR:
++                case NE_EXPR:
++                case EQ_EXPR:
++                        op0 = extract_operand(expr,0);
++                        op1 = extract_operand(expr,1);
++                        if((TREE_CODE(op0) == VAR_DECL || TREE_CODE(op0) == INTEGER_CST) && (TREE_CODE(op1) == VAR_DECL || TREE_CODE(op1) == INTEGER_CST))
++                                valid = true;
++                        else 
++                                valid = false;
++                        break;
++                default:
++                        valid = false;
++                        break;
++                                
++        }
++        return valid;
++}
++
++/**Arguments :variable pointer
++Checks to see that the var passed is not a temp var then,
++  Returns : the string ie. name of the variable **/
++static char *
++extract_string(tree var)
++{
++        char *var_name=NULL;
++        if(var->decl_minimal.name)
++        {
++                var_name = var->decl_minimal.name->identifier.id.str;
++        }
++        else
++                var_name = NULL;
++        return var_name;
++}
++
++static bool
++is_valid_defn(tree stmt)
++{
++	switch(TREE_CODE(stmt))
++	{	
++		case MODIFY_EXPR:
++		case GIMPLE_MODIFY_STMT:
++			return true;
++			break;
++		default:
++			return false;
++			break;
++	}
++
++}
++
++/* 
++There are four kinds of possible definitions
++[locally_scoped_defn]	al   = .... ; where "al" is some local variable
++[globally_scoped_defn]  ag   = .... ; where "ag" is some global variable
++[artificial_defn]   	ag.0 = .... ; where ag.0 is local copy of some global variable
++[temorary_defn] 	t123 = .... ; where t123 is a temprary variable created for intermediate computations is complex exression (Gimple IR specific)i
++*/
++ 
++static defn_scope
++type_of_defn(tree defn)
++{
++	tree lval=NULL;
++	var_scope type;
++	/* Fix me: Can be used extract_lval, but currently it's returning only for locals*/
++	lval = extract_operand(defn,0);
++	if ( lval && TREE_CODE(lval) == VAR_DECL)
++	{
++		type = type_of_var(lval);
++		switch(type)
++		{
++			case locally_scoped_var:
++				return locally_scoped_defn;
++				break;
++
++			case globally_scoped_var:
++				return globally_scoped_defn;
++				break;
++			case artificial_var:
++				return artificial_defn;
++				break;
++			case temporary_var: 
++				return temporary_defn;
++				break;
++                        default:
++				return uninteresting_defn_type;
++				break;
++		}
++	}
++
++	return uninteresting_defn_type;
++}
++
++/**  End of accessor functions for entities in gimple IR **/
++
++/** End of local functions **/
++
++
++tree 
++extract_expr(tree stmt)
++{
++        tree expr=NULL, lval=NULL;
++        switch(TREE_CODE(stmt))
++        {
++                case COND_EXPR:
++                                expr = extract_operand(stmt,0);
++                                break;
++                case MODIFY_EXPR:
++                case GIMPLE_MODIFY_STMT:
++                                lval = extract_operand(stmt,0);
++                                expr = extract_operand(stmt,1);
++                                
++                                /*Skip modify expressions of type a.0 = a*/
++                                if( TREE_CODE(expr) == VAR_DECL && ENTITY_INDEX(*lval) == ENTITY_INDEX(*expr) 
++                                   )
++                                        expr = NULL;
++                                break;
++                default:
++                                expr = NULL;
++        }
++        if(expr && is_valid_expr(expr))
++                return expr;
++        else 
++                return NULL;
++        
++}
++
++tree 
++extract_lval(tree stmt)
++{
++        tree expr=NULL, lval=NULL;
++        switch(TREE_CODE(stmt))
++        {
++                case MODIFY_EXPR:
++                case GIMPLE_MODIFY_STMT:
++                        lval =  extract_operand (stmt, 0);
++                        if(ENTITY_INDEX(*lval) == -1) 
++                                lval = NULL;
++                        break;
++                default:
++                        lval = NULL;
++                        break;
++        }
++        return lval;
++}
++
++tree 
++extract_operand(tree expr,int op_num)
++{        
++        tree opd = NULL;
++        
++        assert ((op_num == 0) || (op_num ==1));
++
++        if (TREE_CODE(expr) == GIMPLE_MODIFY_STMT)
++                opd =  GIMPLE_STMT_OPERAND (expr, op_num);
++        else
++                opd = TREE_OPERAND(expr,op_num);
++
++
++        return opd;
++}
++
++
++
++void
++report_dfa_spec_error(const char * mesg)
++{
++        fprintf(stderr,"DFA initialization error: %s\n",mesg);
++        exit(1);
++}
++
++/****************** dfvalue interface  ********************/
++/* defined in terms of bitmap support available in gcc */
++/* please see the sbitmap.h and sbitmap.c files        */
++
++bool
++is_dfvalue_equal(dfvalue value1, dfvalue value2)
++{
++	return (sbitmap_equal(value1,value2));
++}
++
++void
++free_dfvalue_space(dfvalue value)
++{
++    sbitmap_free(value);
++}
++
++dfvalue 
++intersect_dfvalues (dfvalue value1, dfvalue value2)
++{
++	sbitmap temp;
++
++        temp  = make_uninitialised_dfvalue();
++
++        sbitmap_a_and_b(temp, value1, value2);
++	
++	return temp;
++}
++
++dfvalue 
++a_plus_b_minus_c(dfvalue v_a, dfvalue v_b, dfvalue v_c)
++{
++	sbitmap temp;
++
++        temp  = make_uninitialised_dfvalue();
++
++        sbitmap_union_of_diff(temp, v_a, v_b, v_c);
++	
++	return temp;
++}
++
++dfvalue 
++union_dfvalues (dfvalue value1, dfvalue value2)
++{
++	sbitmap temp;
++
++        temp  = make_uninitialised_dfvalue();
++
++        sbitmap_a_or_b(temp, value1, value2);
++	
++	return temp;
++}
++
++dfvalue
++make_initialised_dfvalue(initial_value value)
++{
++        sbitmap temp;
++
++        temp = make_uninitialised_dfvalue();
++
++        switch (value)
++        {        
++                case ONES:
++                        sbitmap_ones(temp);
++                        break;
++                case ZEROS:
++                        sbitmap_zero(temp);
++                        break;
++                default:
++                        report_dfa_spec_error ("Wrong initial value (Function make_initialised_dfvalue)");
++                        break;
++        }
++        return temp;
++}
++
++extern int relevant_pfbv_entity_count;
++
++dfvalue
++make_uninitialised_dfvalue(void)
++{        
++        sbitmap temp;
++        
++        temp = sbitmap_alloc(relevant_pfbv_entity_count);
++
++        return temp;
++}
++
++void
++dump_dfvalue (FILE * file, dfvalue value)
++{
++	dump_sbitmap(file, value);
++}
++
+diff -Naur gcc-4.3.0/gcc/Makefile.in gcc-4.3.0/gcc/Makefile.in
+--- gcc-4.3.0/gcc/Makefile.in	2008-02-25 20:23:34.000000000 +0530
++++ gcc-4.3.0/gcc/Makefile.in	2010-03-22 02:00:10.515726548 +0530
+@@ -993,6 +993,9 @@
+ # them sooner, because they are large and otherwise tend to be the
+ # last objects to finish building.
+ OBJS-common = \
++	gimple-pfbvdfa-support.o \
++	gimple-pfbvdfa-driver.o \
++	gimple-pfbvdfa-specs.o \
+ 	insn-attrtab.o \
+ 	insn-automata.o \
+ 	insn-emit.o \
+@@ -1224,7 +1227,7 @@
+ 	version.o \
+ 	vmsdbgout.o \
+ 	web.o \
+-	xcoffout.o
++	xcoffout.o 
+ 
+ # Target object files.
+ OBJS-md = $(out_object_file)
+@@ -1775,6 +1778,26 @@
+ 	$(EBITMAP_H)
+ sparseset.o: sparseset.c $(SYSTEM_H) sparseset.h
+ 
++assign-indices.o: assign-indices.c accessor.h $(CONFIG_H) $(SYSTEM_H) coretypes.h \
++    $(TM_H) $(TREE_H) $(C_TREE_H) $(RTL_H) insn-config.h $(INTEGRATE_H) \
++    $(FUNCTION_H) $(FLAGS_H) toplev.h $(TREE_INLINE_H) $(DIAGNOSTIC_H) $(VARRAY_H) \
++    langhooks.h $(GGC_H) $(TARGET_H) $(C_PRETTY_PRINT_H) 
++
++gimple-pfbvdfa-support.o: gimple-pfbvdfa-support.c gimple-pfbvdfa.h \
++    $(CONFIG_H) $(SYSTEM_H) $(TM_H) $(TREE_H) $(C_TREE_H) $(RTL_H) insn-config.h \
++    $(INTEGRATE_H) $(FUNCTION_H) $(FLAGS_H) toplev.h $(TREE_INLINE_H) $(DIAGNOSTIC_H) \
++    $(VARRAY_H) langhooks.h $(GGC_H) $(TARGET_H) $(C_PRETTY_PRINT_H) coretypes.h 
++
++gimple-pfbvdfa-specs.o: gimple-pfbvdfa-specs.c gimple-pfbvdfa.h \
++    $(CONFIG_H) $(SYSTEM_H) $(TM_H) $(TREE_H) $(C_TREE_H) $(RTL_H) insn-config.h \
++    $(INTEGRATE_H) $(FUNCTION_H) $(FLAGS_H) toplev.h $(TREE_INLINE_H) $(DIAGNOSTIC_H) \
++    $(VARRAY_H) langhooks.h $(GGC_H) $(TARGET_H) $(C_PRETTY_PRINT_H) coretypes.h 
++
++gimple-pfbvdfa-driver.o: gimple-pfbvdfa-driver.c gimple-pfbvdfa.h \
++    $(CONFIG_H) $(SYSTEM_H) $(TM_H) $(TREE_H) $(C_TREE_H) $(RTL_H) insn-config.h \
++    $(INTEGRATE_H) $(FUNCTION_H) $(FLAGS_H) toplev.h $(TREE_INLINE_H) $(DIAGNOSTIC_H) \
++    $(VARRAY_H) langhooks.h $(GGC_H) $(TARGET_H) $(C_PRETTY_PRINT_H) coretypes.h 
++
+ COLLECT2_OBJS = collect2.o tlink.o intl.o version.o
+ COLLECT2_LIBS = @COLLECT2_LIBS@
+ collect2$(exeext): $(COLLECT2_OBJS) $(LIBDEPS)
+diff -Naur gcc-4.3.0/gcc/passes.c gcc-4.3.0/gcc/passes.c
+--- gcc-4.3.0/gcc/passes.c	2008-01-22 18:57:52.000000000 +0530
++++ gcc-4.3.0/gcc/passes.c	2010-03-22 02:00:10.520227749 +0530
+@@ -483,6 +483,15 @@
+   NEXT_PASS (pass_refactor_eh);
+   NEXT_PASS (pass_lower_eh);
+   NEXT_PASS (pass_build_cfg);
++/* Intraprocedural dfa passes begin */
++  NEXT_PASS (pass_init_gimple_pfbvdfa);
++  NEXT_PASS (pass_gimple_pfbv_ave_dfa);
++  NEXT_PASS (pass_gimple_pfbv_pav_dfa);
++  NEXT_PASS (pass_gimple_pfbv_ant_dfa);
++  NEXT_PASS (pass_gimple_pfbv_lv_dfa);
++  NEXT_PASS (pass_gimple_pfbv_pre_dfa);
++  NEXT_PASS (pass_gimple_pfbv_rd_dfa);
++/* Intraprocedural dfa passes end */
+   NEXT_PASS (pass_lower_complex_O0);
+   NEXT_PASS (pass_lower_vector);
+   NEXT_PASS (pass_warn_function_return);
+diff -Naur gcc-4.3.0/gcc/tree-cfg.c gcc-4.3.0/gcc/tree-cfg.c
+--- gcc-4.3.0/gcc/tree-cfg.c	2008-01-21 21:51:45.000000000 +0530
++++ gcc-4.3.0/gcc/tree-cfg.c	2010-03-22 02:00:10.524227839 +0530
+@@ -133,6 +133,8 @@
+   SET_BASIC_BLOCK (EXIT_BLOCK, EXIT_BLOCK_PTR);
+   ENTRY_BLOCK_PTR->next_bb = EXIT_BLOCK_PTR;
+   EXIT_BLOCK_PTR->prev_bb = ENTRY_BLOCK_PTR;
++  ENTRY_BLOCK_PTR->dfs_number = -1;
++  EXIT_BLOCK_PTR->dfs_number  = -1;
+ }
+ 
+ /*---------------------------------------------------------------------------
+@@ -371,6 +373,9 @@
+   bb->flags = BB_NEW;
+   bb->il.tree = GGC_CNEW (struct tree_bb_info);
+   set_bb_stmt_list (bb, h ? (tree) h : alloc_stmt_list ());
++  
++  /* Set dfs_number to -1, later this field will be initialised in gdfa */
++  bb->dfs_number = -1;
+ 
+   /* Add the new block to the linked list of blocks.  */
+   link_block (bb, after);
+diff -Naur gcc-4.3.0/gcc/tree.h gcc-4.3.0/gcc/tree.h
+--- gcc-4.3.0/gcc/tree.h	2008-02-09 00:40:25.000000000 +0530
++++ gcc-4.3.0/gcc/tree.h	2010-03-22 02:00:10.524227839 +0530
+@@ -404,6 +404,12 @@
+   /* FIXME tuples: Eventually, we need to move this somewhere external to
+      the trees.  */
+   union tree_ann_d *ann;
++
++  /* This index is used for data flow analysis, which willspecify index
++   * of entity under considaration, i.e. variable, expression etc
++   */
++  signed int index;
++
+ };
+ 
+ struct tree_common GTY(())
+diff -Naur gcc-4.3.0/gcc/tree-pass.h gcc-4.3.0/gcc/tree-pass.h
+--- gcc-4.3.0/gcc/tree-pass.h	2008-02-13 16:45:51.000000000 +0530
++++ gcc-4.3.0/gcc/tree-pass.h	2010-03-22 02:00:10.528229116 +0530
+@@ -449,6 +449,13 @@
+ extern struct tree_opt_pass pass_apply_inline;
+ extern struct tree_opt_pass pass_all_early_optimizations;
+ extern struct tree_opt_pass pass_update_address_taken;
++extern struct tree_opt_pass pass_init_gimple_pfbvdfa;
++extern struct tree_opt_pass pass_gimple_pfbv_ave_dfa;
++extern struct tree_opt_pass pass_gimple_pfbv_pav_dfa;
++extern struct tree_opt_pass pass_gimple_pfbv_ant_dfa;
++extern struct tree_opt_pass pass_gimple_pfbv_lv_dfa;
++extern struct tree_opt_pass pass_gimple_pfbv_pre_dfa;
++extern struct tree_opt_pass pass_gimple_pfbv_rd_dfa;
+ 
+ /* The root of the compilation pass tree, once constructed.  */
+ extern struct tree_opt_pass *all_passes, *all_ipa_passes, *all_lowering_passes;

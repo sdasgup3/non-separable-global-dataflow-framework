@@ -6,24 +6,30 @@
 * Documents
   * listOfFilesModified.txt 
   * CodeDiff.txt 
+  * gdfa-v1.2-gcc-4.3.0.patch : gdfa pathch for gcc 4.3.0 
 * Test
 * Source : The gcc 4.3.0 source code base patched with gdfa where we have done the modifications
 
 ##HOW TO BUILD
 
-The following steps need to be followed:
-        mkdir gcc_gdfa_build             /*This is created parrallel to the source directory gcc-4.3.0*/
-        setenv GDFA_HOME <absolute path>/gcc_gdfa_bulid
-        cd $GDFA_HOME
-        ../gcc-4.3.0/configure --prefix=/home/dsand/Compiler/GDFA/gcc_gdfa_install  --enable-languages=c --with-gmp=/usr/local --with-mpfr=/usr/local 
-        make all-gcc TARGET-gcc=cc1 BOOT_CFLAGS='-O0 -g3' -j 2
+* mkdir gdfa
+* cd gdfa
+* Download gcc-4.3.0-tar.gz from https://gcc.gnu.org/mirrors.html  in here.
+* Copy gdfa-v1.2-gcc-4.3.0.patch from Documents in here. This path can be downloaded from http://www.cse.iitb.ac.in/grc/index.php?page=gdfa.
+* tar -xvf gcc-4.3.0-tar.gz
+* mkdir gcc-4.3.0.obj gcc-4.3.0.install
+* patch -p0   < gdfa-v1.2-gcc-4.3.0.patch
+* cd gcc-4.3.0.obj
+* ../gcc-4.3.0/configure --enable-languages=c --prefix=<path to gcc-4.3.0.install>
+* make all-gcc TARGET-gcc=cc1 BOOT_CFLAGS='-O0 -g3' -j 2
+* make install
 
-                                        ** THE EXECUTABLE FILE : $GDFA_HOME/gcc/cc1 **
+##HOW TO TEST THE CORRECTNESS OF BEHAVIOUR
 
-
-                                            C.HOW TO TEST THE CORRECTNESS OF BEHAVIOUR
-                                            ==========================================
-
+* cd Test 
+* foreach test in `find *.c -name .`
+  ** cc1 -fgdfa -fdump-tree-all $test /*This will generate many dump files as test_1.c.*
+  ** 
 The Test directory contains the following testcases:
 
         Test_1     : Contain the case test_1.c and the expected output of all the dump files as  gold_test_1.c.*
