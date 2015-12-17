@@ -1,15 +1,15 @@
+##DIRECTORY STRUCTURE
 
-                                                A.DIRECTORY STRUCTURE
-                                                =====================
+* Reports
+  * Report.pdf                
+  * Presentation.pdf
+* Documents
+  * listOfFilesModified.txt 
+  * CodeDiff.txt 
+* Test
+* Source : The gcc 4.3.0 source code base patched with gdfa where we have done the modifications
 
-1.    Reports/Report.pdf                    : The Project Report.
-2.    gcc-4.3.0                             : The gcc source code base patched with gdfa where we have done the modifications.
-3.    Documents/listOfFilesModified.txt     : All the files belong to gcc-4.3.0/gcc directory.        
-4.    Documents/CodeDiff.txt                : The Code diff.
-5.    Test                                  : The testcases.
-
-                                                    B.HOW TO BUILD
-                                                    ===============
+##HOW TO BUILD
 
 The following steps need to be followed:
         mkdir gcc_gdfa_build             /*This is created parrallel to the source directory gcc-4.3.0*/
