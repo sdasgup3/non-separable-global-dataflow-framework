@@ -1,0 +1,142 @@
+
+;; Function test (test)
+
+test ()
+{
+  int d;
+  int c;
+  int b;
+  int a;
+
+  # BLOCK 2
+  # PRED: ENTRY (fallthru)
+  d = 0;
+  # SUCC: 3 (fallthru)
+
+  # BLOCK 3
+  # PRED: 2 (fallthru) 12 (fallthru)
+x:;
+  if (d > 2)
+    goto <bb 4>;
+  else
+    goto <bb 7>;
+  # SUCC: 4 (true) 7 (false)
+
+  # BLOCK 4
+  # PRED: 3 (true)
+  if (a > 1)
+    goto <bb 5>;
+  else
+    goto <bb 6>;
+  # SUCC: 5 (true) 6 (false)
+
+  # BLOCK 5
+  # PRED: 4 (true)
+  printf (&"dsada"[0]);
+  # SUCC: 6 (fallthru)
+
+  # BLOCK 6
+  # PRED: 4 (false) 5 (fallthru)
+  return;
+  # SUCC: EXIT
+
+  # BLOCK 7
+  # PRED: 3 (false)
+  if (d > 1)
+    goto <bb 8>;
+  else
+    goto <bb 9>;
+  # SUCC: 8 (true) 9 (false)
+
+  # BLOCK 8
+  # PRED: 7 (true)
+  a = b;
+  goto <bb 12>;
+  # SUCC: 12 (fallthru)
+
+  # BLOCK 9
+  # PRED: 7 (false)
+  if (d > 0)
+    goto <bb 10>;
+  else
+    goto <bb 11>;
+  # SUCC: 10 (true) 11 (false)
+
+  # BLOCK 10
+  # PRED: 9 (true)
+  b = c;
+  goto <bb 12>;
+  # SUCC: 12 (fallthru)
+
+  # BLOCK 11
+  # PRED: 9 (false)
+  c = 9;
+  # SUCC: 12 (fallthru)
+
+  # BLOCK 12
+  # PRED: 8 (fallthru) 10 (fallthru) 11 (fallthru)
+  d = d + 1;
+  goto <bb 3> (x);
+  # SUCC: 3 (fallthru)
+
+}
+
+
+test ()
+{
+  int d;
+  int c;
+  int b;
+  int a;
+
+<bb 2>:
+  d = 0;
+
+x:;
+  if (d > 2)
+    goto <bb 4>;
+  else
+    goto <bb 7>;
+
+<bb 4>:
+  if (a > 1)
+    goto <bb 5>;
+  else
+    goto <bb 6>;
+
+<bb 5>:
+  printf (&"dsada"[0]);
+
+<bb 6>:
+  return;
+
+<bb 7>:
+  if (d > 1)
+    goto <bb 8>;
+  else
+    goto <bb 9>;
+
+<bb 8>:
+  a = b;
+  goto <bb 12>;
+
+<bb 9>:
+  if (d > 0)
+    goto <bb 10>;
+  else
+    goto <bb 11>;
+
+<bb 10>:
+  b = c;
+  goto <bb 12>;
+
+<bb 11>:
+  c = 9;
+
+<bb 12>:
+  d = d + 1;
+  goto <bb 3> (x);
+
+}
+
+

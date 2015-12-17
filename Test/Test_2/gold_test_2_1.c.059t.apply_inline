@@ -1,0 +1,99 @@
+
+;; Function exmp (exmp)
+
+exmp ()
+{
+  int d;
+  int c;
+  int b;
+  int a;
+  int D.1188;
+  int D.1187;
+
+  # BLOCK 2
+  # PRED: ENTRY (fallthru)
+  b = 8;
+  b = d;
+  a = b + a;
+  d = a * b;
+  d = a * 8;
+  if (a < b)
+    goto <bb 3>;
+  else
+    goto <bb 4>;
+  # SUCC: 3 (true) 4 (false)
+
+  # BLOCK 3
+  # PRED: 2 (true)
+  d = a * b;
+  # SUCC: 4 (fallthru)
+
+  # BLOCK 4
+  # PRED: 2 (false) 3 (fallthru)
+  if (a <= 5)
+    goto <bb 5>;
+  else
+    goto <bb 6>;
+  # SUCC: 5 (true) 6 (false)
+
+  # BLOCK 5
+  # PRED: 4 (true)
+  d = d;
+  # SUCC: 6 (fallthru)
+
+  # BLOCK 6
+  # PRED: 4 (false) 5 (fallthru)
+  a = a + 9;
+  D.1187 = c + a;
+  f (D.1187);
+  printf (&"%d"[0], c);
+  D.1188 = 0;
+  return D.1188;
+  # SUCC: EXIT
+
+}
+
+
+exmp ()
+{
+  int d;
+  int c;
+  int b;
+  int a;
+  int D.1188;
+  int D.1187;
+
+<bb 2>:
+  b = 8;
+  b = d;
+  a = b + a;
+  d = a * b;
+  d = a * 8;
+  if (a < b)
+    goto <bb 3>;
+  else
+    goto <bb 4>;
+
+<bb 3>:
+  d = a * b;
+
+<bb 4>:
+  if (a <= 5)
+    goto <bb 5>;
+  else
+    goto <bb 6>;
+
+<bb 5>:
+  d = d;
+
+<bb 6>:
+  a = a + 9;
+  D.1187 = c + a;
+  f (D.1187);
+  printf (&"%d"[0], c);
+  D.1188 = 0;
+  return D.1188;
+
+}
+
+

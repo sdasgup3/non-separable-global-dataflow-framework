@@ -1,0 +1,54 @@
+
+;; Function exmp (exmp)
+;; enabled by -tree-original
+
+
+{
+  int a;
+  int b;
+  int c;
+  int d;
+
+    int a;
+    int b;
+    int c;
+    int d;
+  b = 4;
+  a = b + c;
+  d = a * b;
+  if (x < y)
+    {
+      b = a - c;
+    }
+  else
+    {
+      <D.1190>:;
+      {
+        c = b + c;
+        if (y > x)
+          {
+            <D.1187>:;
+            {
+              d = a + b;
+              f (b + c);
+            }
+            if (y > x) goto <D.1187>; else goto <D.1188>;
+            <D.1188>:;
+          }
+        else
+          {
+            {
+              c = a * b;
+              f (a - b);
+            }
+          }
+        g (a + b);
+      }
+      if (z > x) goto <D.1190>; else goto <D.1191>;
+      <D.1191>:;
+    }
+  h (a - c);
+  f (b + c);
+}
+
+

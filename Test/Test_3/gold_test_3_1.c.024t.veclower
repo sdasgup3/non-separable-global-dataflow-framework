@@ -1,0 +1,53 @@
+
+;; Function test (test)
+
+test ()
+{
+  int d;
+  int c;
+  int b;
+  int a;
+
+<bb 2>:
+  d = 0;
+
+x:;
+  if (d > 2)
+    goto <bb 4>;
+  else
+    goto <bb 5>;
+
+<bb 4>:
+  printf (&"%d"[0], a);
+  return;
+
+<bb 5>:
+  if (d > 1)
+    goto <bb 6>;
+  else
+    goto <bb 7>;
+
+<bb 6>:
+  a = b;
+  goto <bb 10>;
+
+<bb 7>:
+  if (d > 0)
+    goto <bb 8>;
+  else
+    goto <bb 9>;
+
+<bb 8>:
+  b = c;
+  goto <bb 10>;
+
+<bb 9>:
+  scanf (&"%d"[0], &c);
+
+<bb 10>:
+  d = d + 1;
+  goto <bb 3> (x);
+
+}
+
+

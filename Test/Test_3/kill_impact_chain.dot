@@ -1,0 +1,11 @@
+digraph G {
+graph [label="Kill Impact Chain"];
+node [style=filled,peripheries=2, color=gray50];
+edge [arrowhead=vee,decorate ];
+b -> c
+c [label="c :: b = c;
+ "];
+a -> b
+b [label="b :: a = b;
+ "];
+}

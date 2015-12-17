@@ -1,0 +1,35 @@
+
+;; Function exmp (exmp)
+;; enabled by -tree-original
+
+
+{
+  int a;
+  int b;
+  int c;
+  int d;
+
+    int a;
+    int b;
+    int c;
+    int d;
+  b = 8;
+  b = d;
+  a = b + a;
+  d = a * b;
+  d = a * 8;
+  if (a < b)
+    {
+      d = a * b;
+    }
+  if (a <= 5)
+    {
+      d = d;
+    }
+  a = a + 9;
+  f (c + a);
+  printf ((const char *) (char *) "%d", c);
+  return 0;
+}
+
+

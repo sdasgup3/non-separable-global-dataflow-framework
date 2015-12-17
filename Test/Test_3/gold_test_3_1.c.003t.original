@@ -1,0 +1,45 @@
+
+;; Function test (test)
+;; enabled by -tree-original
+
+
+{
+  int a;
+  int b;
+  int c;
+  int d;
+  void x = <<< error >>>;
+
+    int a;
+    int b;
+    int c;
+    int d;
+  d = 0;
+  x:;
+  if (d > 2)
+    {
+      printf ((const char * restrict) (char *) "%d", a);
+    }
+  else
+    {
+      if (d > 1)
+        {
+          a = b;
+        }
+      else
+        {
+          if (d > 0)
+            {
+              b = c;
+            }
+          else
+            {
+              scanf ((const char * restrict) (char *) "%d", &c);
+            }
+        }
+      d = d + 1;
+      goto x;
+    }
+}
+
+

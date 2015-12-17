@@ -1,0 +1,42 @@
+
+;; Function exmp (exmp)
+
+exmp ()
+{
+  int D.1187;
+  int D.1188;
+  int a;
+  int b;
+  int c;
+  int d;
+
+  b = 8;
+  b = d;
+  a = b + a;
+  d = a * b;
+  d = a * 8;
+  if (a < b)
+    {
+      d = a * b;
+    }
+  else
+    {
+      
+    }
+  if (a <= 5)
+    {
+      d = d;
+    }
+  else
+    {
+      
+    }
+  a = a + 9;
+  D.1187 = c + a;
+  f (D.1187);
+  printf (&"%d"[0], c);
+  D.1188 = 0;
+  return D.1188;
+}
+
+

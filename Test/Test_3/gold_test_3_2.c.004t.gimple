@@ -1,0 +1,44 @@
+test ()
+{
+  int a;
+  int b;
+  int c;
+  int d;
+  void x = <<< error >>>;
+
+  d = 0;
+  x:;
+  if (d > 2)
+    {
+      if (a > 1)
+        {
+          printf (&"dsada"[0]);
+        }
+      else
+        {
+          
+        }
+    }
+  else
+    {
+      if (d > 1)
+        {
+          a = b;
+        }
+      else
+        {
+          if (d > 0)
+            {
+              b = c;
+            }
+          else
+            {
+              c = 9;
+            }
+        }
+      d = d + 1;
+      goto x;
+    }
+}
+
+

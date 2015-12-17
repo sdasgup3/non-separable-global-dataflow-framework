@@ -1,0 +1,1634 @@
+cvs diff: Diffing .
+Index: gimple-pfbvdfa-driver.c
+===================================================================
+RCS file: /home/dsand/cvs/gcc-4.3.0/gcc/gimple-pfbvdfa-driver.c,v
+retrieving revision 1.1.1.1
+retrieving revision 1.6
+diff -r1.1.1.1 -r1.6
+2c2
+<      gdfa 1.0
+---
+>      gdfo 1.0
+38a39,47
+> /*@Non-separable : START*/
+> #define IS_NONSEPARABLE(dfa_spec)       (IGNORE_ENTITY_DEPENDENCE != dfa_spec.dependent_gen	          \
+>                                   ||    IGNORE_ENTITY_DEPENDENCE  != dfa_spec.dependent_kill) 
+> 
+> #define IS_NODE_CONSTANT(node)          (TREE_CODE(node) == INTEGER_CST || TREE_CODE(node) == REAL_CST    \
+>                                   ||    TREE_CODE(node) == FIXED_CST   || TREE_CODE(node) == COMPLEX_CST  \
+>                                   ||    TREE_CODE(node) == VECTOR_CST  || TREE_CODE(node) == STRING_CST) 
+> #define ENTITY_INDEX(node) (node).common.base.index
+> /*@Non-separable : END*/
+268c277
+< static void create_dfi_space(void);
+---
+> static void create_dfi_space(int);
+301a311,320
+> /*@Non-separable : START*/
+> static void    local_dfa_nonseparable(struct gimple_pfbv_dfa_spec dfa_spec);
+> static dfvalue local_dfa_of_stmt(lp_specs_nonseparable lps_given, tree bb);
+> static dfvalue var_in_statement_nonseparable(tree stmt, lp_specs_nonseparable lps, dfvalue globaldf);
+> static dfvalue update_gen_of_stmt(tree, lp_specs_nonseparable, dfvalue);
+> static dfvalue update_kill_of_stmt(tree, lp_specs_nonseparable, dfvalue);
+> static void dump_impactchain(FILE* file);
+> static void create_impactchain(int df_1, int df_2, entity_dependence dependence, dfvalue global_dfv, tree stmt);
+> static void dump_entity(FILE * file, dfvalue value);
+> /*@Non-separable : END*/
+335a355,361
+> /*@Non-separable : START*/
+> extern tree * local_stmt_list;
+> extern int local_stmt_count;
+> extern int find_index_of_local_stmt(tree stmt);
+> extern void assign_indices_to_stmt(void);
+> extern tree * local_stmt_list;
+> /*@Non-separable : END*/
+348a375,382
+> /*@Non-separable : START*/
+> pfbv_dfi ** current_pfbv_dfi_of_stmt = NULL;
+> static bool is_nonseparable = false; 
+> static lp_specs_nonseparable gen_lps, kill_lps;
+> static change_at_in_out_of_stmt; 
+> static impact_chain_entity* impact_chain_gen  = NULL;
+> static impact_chain_entity* impact_chain_kill = NULL;
+> /*@Non-separable : END*/
+353a388,389
+> static void debug_statement_expr(void);
+> static void print_dfi(FILE*);
+362c398,403
+<         create_dfi_space(); 
+---
+>         if(IS_NONSEPARABLE(dfa_spec))
+>         {
+> 
+>                 if(NULL == local_stmt_list)  {
+>                         assign_indices_to_stmt();
+>                 }
+364c405,430
+<         local_dfa(dfa_spec); 
+---
+>                 is_nonseparable = true;
+> 
+>                 gen_lps.entity               = dfa_spec.entity;
+>                 gen_lps.stmt_effect          = dfa_spec.gen_effect;
+>                 gen_lps.read_or_use_stmt     = dfa_spec.constgen_statement_type;
+>                 gen_lps.precondition         = dfa_spec.constgen_precondition;
+>                 gen_lps.dependence           = dfa_spec.dependent_gen;
+> 
+>                 kill_lps.entity              = dfa_spec.entity;
+>                 kill_lps.stmt_effect         = dfa_spec.kill_effect;
+>                 kill_lps.read_or_use_stmt    = dfa_spec.constkill_statement_type;
+>                 kill_lps.precondition        = dfa_spec.constkill_precondition;
+>                 kill_lps.dependence          = dfa_spec.dependent_kill;
+> 
+> 
+>                 create_dfi_space(local_stmt_count);
+>                 current_pfbv_dfi_of_stmt = current_pfbv_dfi;
+> 
+>                 create_dfi_space(number_of_nodes);
+> 
+>                 local_dfa_nonseparable(dfa_spec);
+> 		/*debug_statement_expr();*/
+>         } else {
+>                 create_dfi_space(number_of_nodes); 
+>                 local_dfa(dfa_spec); 
+>         }
+378c444,451
+<         return current_pfbv_dfi; 
+---
+>         if(is_nonseparable) 
+>         {
+>                 dump_impactchain(dump_file);
+>                 is_nonseparable = false;
+>                 return current_pfbv_dfi_of_stmt;
+>         } else {
+>                 return current_pfbv_dfi; 
+>         }
+426c499
+< 
+---
+>  
+453c526
+< 		print_per_iteration_dfi(iteration_number);
+---
+> 		print_per_iteration_dfi(iteration_number); 
+466a540
+>         change_at_in_out_of_stmt = false;
+468c542
+<         if (!bb->preds)
+---
+>         if (!bb->preds) 
+470c544
+<         else
+---
+>         else 
+473c547
+<                             
+---
+> 
+482c556
+<         return change;
+---
+>         return change || change_at_in_out_of_stmt ;
+491a566
+>         change_at_in_out_of_stmt = false;
+507c582
+<         return change;
+---
+>         return change || change_at_in_out_of_stmt;
+596a672,701
+> 
+>                         if(is_nonseparable) 
+>                         {
+>                                 for (iter=0; iter < local_stmt_count; iter++)
+>                                 {
+>                                         if (GEN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter))
+>                                         {
+>                                                 free_dfvalue_space(GEN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter));
+>                                                 GEN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter) = NULL; 
+>                                         }
+>                                         if (KILL_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter))
+>                                         {
+>                                                 free_dfvalue_space(KILL_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter));
+>                                                 KILL_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter) = NULL; 
+>                                         }
+>                                         if (IN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter))
+>                                         {
+>                                                 free_dfvalue_space(IN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter));
+>                                                 IN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter) = NULL; 
+>                                         }
+>                                         if (OUT_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter))
+>                                         {
+>                                                 free_dfvalue_space(OUT_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter));
+>                                                 OUT_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter) = NULL; 
+>                                         }
+>                                 }
+>                                 if (current_pfbv_dfi_of_stmt)
+>                                         ggc_free(current_pfbv_dfi_of_stmt);
+>                                 current_pfbv_dfi_of_stmt = NULL;
+>                         }
+611a717,732
+>                         if(is_nonseparable) 
+>                         {
+>                                 for (iter=0; iter < local_stmt_count; iter++)
+>                                 {
+>                                         if (GEN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter))
+>                                         {
+>                                                 free_dfvalue_space(GEN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter));
+>                                                 GEN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter) = NULL; 
+>                                         }
+>                                         if (KILL_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter))
+>                                         {
+>                                                 free_dfvalue_space(KILL_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter));
+>                                                 KILL_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter) = NULL; 
+>                                         }
+>                                 }
+>                         }
+625c746
+< create_dfi_space(void)
+---
+> create_dfi_space(int number_of_nodes)
+693c814,817
+<         dfvalue temp;
+---
+>         dfvalue temp, gen_of_stmt, kill_of_stmt, old_in_dfvalue, old_out_dfvalue, new_in_dfvalue, new_out_dfvalue;
+>         block_stmt_iterator bsi;
+>         tree stmt = NULL;
+>         bool change_at_in, change_at_out;
+695a820
+>         new_out_dfvalue = CURRENT_IN(bb); 
+697c822,827
+< 	temp = a_plus_b_minus_c(CURRENT_GEN(bb), CURRENT_IN(bb), CURRENT_KILL(bb));
+---
+>         if(true == is_nonseparable) 
+>         {
+>                 new_in_dfvalue = CURRENT_IN(bb);  
+>                 FOR_EACH_STMT_FWD
+>                 {
+>                         stmt = bsi_stmt(bsi); 
+698a829,858
+>                         if(-1 == find_index_of_local_stmt(stmt))  continue;                        
+>                                                
+>                         old_in_dfvalue = IN_OF_STMT(current_pfbv_dfi_of_stmt, stmt); 
+>                         change_at_in = is_new_info(new_in_dfvalue, old_in_dfvalue);
+>                         if(change_at_in)
+>                         {
+>                                 IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt) = new_in_dfvalue;
+>                                 if(old_in_dfvalue) free_dfvalue_space(old_in_dfvalue); 
+>                         }
+> 
+>                         gen_of_stmt  = update_gen_of_stmt(stmt, gen_lps,  new_in_dfvalue);
+>                         kill_of_stmt = update_kill_of_stmt(stmt, kill_lps, new_in_dfvalue);
+> 
+>                         new_out_dfvalue = a_plus_b_minus_c(gen_of_stmt, new_in_dfvalue, kill_of_stmt); 
+> 
+>                         old_out_dfvalue = OUT_OF_STMT(current_pfbv_dfi_of_stmt, stmt);
+>                         change_at_out = is_new_info(new_out_dfvalue, old_out_dfvalue);
+>                         if (change_at_out)
+>                         {
+>                                 OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt) = new_out_dfvalue;
+>                                 if (old_out_dfvalue) free_dfvalue_space(old_out_dfvalue);
+>                         }
+> 
+>                         change_at_in_out_of_stmt = change_at_in_out_of_stmt || change_at_out || change_at_in;
+>                         new_in_dfvalue = new_out_dfvalue;
+>                 }
+>                 temp = new_out_dfvalue;
+>         } else {
+> 	        temp = a_plus_b_minus_c(CURRENT_GEN(bb), CURRENT_IN(bb), CURRENT_KILL(bb));
+>         }
+705c865,868
+<         dfvalue temp;
+---
+>         dfvalue temp, gen_of_stmt, kill_of_stmt, old_in_dfvalue, old_out_dfvalue, new_in_dfvalue, new_out_dfvalue;
+>         block_stmt_iterator bsi;
+>         tree stmt = NULL;
+>         bool change_at_in, change_at_out;
+707a871
+>         new_in_dfvalue = CURRENT_OUT(bb); 
+709c873,909
+< 	temp = a_plus_b_minus_c(CURRENT_GEN(bb), CURRENT_OUT(bb), CURRENT_KILL(bb));
+---
+>         if(true == is_nonseparable) 
+>         {
+>                 new_out_dfvalue = CURRENT_OUT(bb);  
+>                 FOR_EACH_STMT_BKD
+>                 {
+>                         stmt = bsi_stmt(bsi); 
+> 
+>                         if(-1 == find_index_of_local_stmt(stmt))  continue;                        
+>                         
+>                         old_out_dfvalue = OUT_OF_STMT(current_pfbv_dfi_of_stmt, stmt); 
+>                         change_at_out = is_new_info(new_out_dfvalue, old_out_dfvalue);
+>                         if(change_at_out)
+>                         {
+>                                 OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt) = new_out_dfvalue;
+>                                 if(old_out_dfvalue) free_dfvalue_space(old_out_dfvalue); 
+>                         }
+> 
+>                         gen_of_stmt  = update_gen_of_stmt(stmt, gen_lps, new_out_dfvalue);
+>                         kill_of_stmt = update_kill_of_stmt(stmt, kill_lps,new_out_dfvalue);
+> 
+>                         new_in_dfvalue = a_plus_b_minus_c(gen_of_stmt, new_out_dfvalue, kill_of_stmt);
+> 
+>                         old_in_dfvalue = IN_OF_STMT(current_pfbv_dfi_of_stmt, stmt);
+>                         change_at_in = is_new_info(new_in_dfvalue, old_in_dfvalue);
+>                         if (change_at_in)
+>                         {
+>                                 IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt) = new_in_dfvalue;
+>                                 if (old_in_dfvalue) free_dfvalue_space(old_in_dfvalue);
+>                         }
+> 
+>                         change_at_in_out_of_stmt = change_at_in_out_of_stmt || change_at_out || change_at_in;
+>                         new_out_dfvalue = new_in_dfvalue;
+>                 }
+>                 temp = new_in_dfvalue;
+>         } else {
+> 	        temp = a_plus_b_minus_c(CURRENT_GEN(bb), CURRENT_OUT(bb), CURRENT_KILL(bb));
+>         }
+741a942,1287
+> local_dfa_nonseparable(struct gimple_pfbv_dfa_spec dfa_spec)
+> {
+>         int iter;
+>         tree stmt = NULL;
+> 
+>         for (iter=0; iter < local_stmt_count; iter++)
+>         {
+>                 stmt                                                 = local_stmt_list[iter];
+>                 GEN_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter)       = local_dfa_of_stmt(gen_lps, stmt);
+>                 KILL_OF_STMT_nid(current_pfbv_dfi_of_stmt,iter)      = local_dfa_of_stmt(kill_lps, stmt);
+>         }       
+> }        
+> 
+> static dfvalue 
+> local_dfa_of_stmt(lp_specs_nonseparable lps_given, tree stmt)
+> {
+>     dfvalue dfvalue_of_stmt = NULL;
+>     switch (lps_given.entity)
+>         {
+>         case entity_var:
+>             dfvalue_of_stmt = var_in_statement_nonseparable(stmt,lps_given, NULL);
+>             break;
+>         case entity_expr:
+>             break;
+>         case entity_defn:
+>             break;
+>         default :
+>             report_dfa_spec_error ("Wrong choice of entity in local property computation (Function effect_of_statement)");
+>             break;
+>     }
+>     return dfvalue_of_stmt;
+> }
+> 
+> static dfvalue
+> var_in_statement_nonseparable(tree stmt, lp_specs_nonseparable lps, dfvalue global_dfv)
+> {
+>         dfvalue temp_Gen = NULL;
+>         tree expr=NULL, left_opd=NULL, right_opd=NULL, lval=NULL;
+>         int lval_index=-1, left_opd_index=-1, right_opd_index=-1;
+>         bool operand_is_constant = false;
+>         impact_chain_entity* impact_chan = NULL;
+> 
+>         if (lps.entity != entity_var)
+>                 report_dfa_spec_error ("Wrong choice of entity in local property computation (Function vars_in_statement)");
+> 
+>         temp_Gen = make_initialised_dfvalue(ZEROS);
+> 
+>         /*Extract the lvalue of the stmt*/
+>         lval = extract_lval(stmt);
+>         lval_index = find_index_of_local_var(lval);
+> 
+>         /*Extract the expr of the stmt*/
+>         expr = extract_expr(stmt);
+> 
+>         if (expr)
+>         {
+>                 left_opd = extract_operand(expr,0);
+>                 right_opd = extract_operand(expr,1);
+>                 left_opd_index = find_index_of_local_var(left_opd);
+>                 right_opd_index = find_index_of_local_var(right_opd);
+>         } else {
+>                 if(TREE_CODE(stmt) == GIMPLE_MODIFY_STMT || TREE_CODE(stmt) == MODIFY_EXPR)
+>                 {
+>                         expr = extract_operand(stmt,1);
+> 
+>                         /* Check if the operand is constant, i.e stmts of type a =5.*/
+>                         operand_is_constant = IS_NODE_CONSTANT(expr) ? true : false;  
+> 
+>                         /* Stmts of type a = b; or a = a; These are represented by left_opd_index > 0 and right_opd_index = -2.*/
+>                         if(TREE_CODE(expr) == VAR_DECL) 
+>                         {
+>                                  left_opd = extract_operand(expr,0);
+>                                  if(TREE_CODE(left_opd) == IDENTIFIER_NODE) 
+>                                  {
+>                                          left_opd_index = find_index_of_local_var(expr); 
+>                                  }
+>                         }
+>                 }
+>         }
+> 
+> 
+>         switch (lps.stmt_effect)
+>         {
+>                 case entity_mod:
+>                         if(NULL == global_dfv)
+>                         {
+>                                 switch(lps.precondition) 
+>                                 {
+>                                         case X_IN_OPERAND: 
+>                                                 if(-1 != lval_index && (lval_index == left_opd_index || lval_index == right_opd_index)) 
+>                                                 {
+>                                                         SET_BIT(temp_Gen,lval_index);
+>                                                 }
+>                                                 break;
+>                     			case X_NOT_IN_OPERAND:
+>                                                 if(-1 != lval_index && (lval_index != left_opd_index && lval_index != right_opd_index)) 
+>                                                 {
+>                                                         SET_BIT(temp_Gen,lval_index);
+>                                                 }
+>                                                 break;
+>                                         case OPERAND_IS_CONST:
+>                                                 if(true == operand_is_constant) 
+>                                                 {
+>                                                         if(-1 != lval_index)
+>                                                             SET_BIT(temp_Gen,lval_index);
+>                                                 }
+>                                                 break;
+>                                         case OPERAND_ISNOT_CONST:
+>                                                 break;
+>                                         case IGNORE_PRECONDITION:
+>                                                 break;
+>                                 }
+>                                 switch(lps.read_or_use_stmt)
+>                                 {
+>                                         case READ_X:
+>                                                 break;
+>                                         case USE_X:
+>                                                 break;
+>                                         case IGNORE_STATEMENT_TYPE:
+>                                                 break;
+>                                 }
+>                         } else {
+>                                 switch(lps.dependence)
+>                                 {
+>                                         case X_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                if(-1 != lval_index) 
+>                                                {
+>                                                        if(TEST_BIT(global_dfv, lval_index)) 
+>                                                        {
+>                                                                SET_BIT(temp_Gen,lval_index);
+>                                                                /*Can be extended as above.*/
+>                                                        }
+>                                                }
+>                                                break;
+>                                         case X_NOT_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                if(-1 != lval_index) 
+>                                                {
+>                                                        if(0 == TEST_BIT(global_dfv, lval_index))
+>                                                        { 
+>                                                                SET_BIT(temp_Gen,lval_index);
+>                                                                /*Can be extended as above.*/
+>                                                        }
+>                                                }
+>                                                break;
+>                                         case OPER_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                if(-1 != lval_index) 
+>                                                {
+>                                                        if( (-1 != left_opd_index && TEST_BIT(global_dfv, left_opd_index)) 
+>                                                                        || (-1 != right_opd_index && TEST_BIT(global_dfv, right_opd_index)) ) 
+>                                                        {
+>                                                                SET_BIT(temp_Gen,lval_index);
+>                                                                if(-1 != left_opd_index)
+>                                                                        create_impactchain(left_opd_index, lval_index, OPER_IN_GLOBAL_DATA_FLOW_VALUE, 
+>                                                                                           global_dfv, stmt);
+>                                                                if(-1 != right_opd_index)
+>                                                                        create_impactchain(right_opd_index, lval_index, OPER_IN_GLOBAL_DATA_FLOW_VALUE,
+>                                                                                           global_dfv, stmt);
+>                                                        }
+>                                                }
+>                                                break;
+>                                         case OPER_NOT_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                if(-1 != lval_index) 
+>                                                {
+>                                                        if( (-1 != left_opd_index && -1 == right_opd_index && 0 == TEST_BIT(global_dfv, left_opd_index)) 
+>                                                                        || (-1 != left_opd_index && -1 != right_opd_index &&  0 == TEST_BIT(
+>                                                                            global_dfv, left_opd_index)  && 0 == TEST_BIT(global_dfv, right_opd_index)) ) 
+>                                                        {
+>                                                                SET_BIT(temp_Gen,lval_index);
+>                                                                if(-1 != left_opd_index)
+>                                                                        create_impactchain(left_opd_index, lval_index, OPER_NOT_IN_GLOBAL_DATA_FLOW_VALUE, 
+>                                                                                           global_dfv, stmt);
+>                                                                if(-1 != right_opd_index)
+>                                                                        create_impactchain(right_opd_index, lval_index, OPER_NOT_IN_GLOBAL_DATA_FLOW_VALUE,
+>                                                                                           global_dfv, stmt);
+>                                                        }
+>                                                }
+>                                                break;
+>                                         case IGNORE_ENTITY_DEPENDENCE:
+>                                                break;
+>                                 }
+>                         }
+>                         break;
+>                 case entity_use:
+>                         if(NULL == global_dfv)
+>                         { 
+>                                 switch(lps.precondition)
+>                                 {
+>                                         case X_IN_OPERAND:
+>                                             break;
+>                                         case X_NOT_IN_OPERAND:
+>                                             break;
+>                                         case OPERAND_IS_CONST:
+>                                             if(true == operand_is_constant) 
+>                                             {
+>                                                     if(-1 != lval_index)
+>                                                             SET_BIT(temp_Gen,lval_index);
+>                                             }
+>                                             break;
+>                                         case OPERAND_ISNOT_CONST:
+>                                             break;
+>                                         case IGNORE_PRECONDITION:
+>                                             break;
+>                                 }
+>                                 switch(lps.read_or_use_stmt)
+>                                 {
+>                                         case READ_X:
+>                                             break;
+>                                         case USE_X:
+>                                             /*Condition Checking*/
+>                                             if(-1 == lval_index) 
+>                                             {
+>                                                     if(-1 != left_opd_index)
+>                                                             SET_BIT(temp_Gen,left_opd_index);
+>                                                     if(-1 != right_opd_index)
+>                                                             SET_BIT(temp_Gen,right_opd_index);
+>                                             }           
+>                                             break;
+>                                         case IGNORE_STATEMENT_TYPE:
+>                                             break;
+>                                 }
+>                         } else {
+>                                 switch(lps.dependence)
+>                                 {
+>                                         case X_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                if(-1 != lval_index) 
+>                                                {
+>                                                        if(TEST_BIT(global_dfv, lval_index))
+>                                                        {
+>                                                                if(-1 != left_opd_index) {
+>                                                                        SET_BIT(temp_Gen,left_opd_index);
+>                                                                        create_impactchain(lval_index, left_opd_index, X_IN_GLOBAL_DATA_FLOW_VALUE, 
+>                                                                                           global_dfv, stmt);
+>                                                                }
+>                                                                if(-1 != right_opd_index) {
+>                                                                        SET_BIT(temp_Gen,right_opd_index);
+>                                                                        create_impactchain(lval_index, right_opd_index, X_IN_GLOBAL_DATA_FLOW_VALUE, 
+>                                                                                           global_dfv, stmt);
+>                                                                }
+>                                                        }
+>                                                }
+>                                             break;
+>                                         case X_NOT_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                if(-1 != lval_index) 
+>                                                {
+>                                                        if(0 == TEST_BIT(global_dfv, lval_index))
+>                                                        {
+>                                                                if(-1 != left_opd_index) {
+>                                                                        SET_BIT(temp_Gen,left_opd_index);
+>                                                                        create_impactchain(lval_index, left_opd_index, X_NOT_IN_GLOBAL_DATA_FLOW_VALUE, 
+>                                                                                           global_dfv, stmt);
+>                                                                }
+>                                                                if(-1 != right_opd_index) {
+>                                                                        SET_BIT(temp_Gen,right_opd_index);
+>                                                                        create_impactchain(lval_index, right_opd_index, X_NOT_IN_GLOBAL_DATA_FLOW_VALUE, 
+>                                                                                           global_dfv, stmt);
+>                                                                }
+>                                                        }
+>                                                 }
+>                                             break;
+>                                         case OPER_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                 if( (-1 != left_opd_index && TEST_BIT(global_dfv, left_opd_index)) 
+>                                                                 || (-1 != right_opd_index && TEST_BIT(global_dfv, right_opd_index)) ) 
+>                                                 {
+>                                                         if(-1 != left_opd_index) {
+>                                                                 SET_BIT(temp_Gen,left_opd_index);
+>                                                                 /*Can be extended as above.*/
+>                                                         }
+>                                                         if(-1 != right_opd_index) {
+>                                                                 SET_BIT(temp_Gen,right_opd_index);
+>                                                                 /*Can be extended as above.*/
+>                                                         }
+>                                                 }
+>                                             break;
+>                                         case OPER_NOT_IN_GLOBAL_DATA_FLOW_VALUE:
+>                                                 if( (-1 != left_opd_index && -1 == right_opd_index && 0 == TEST_BIT(global_dfv, left_opd_index)) 
+>                                                                 || (-1 != left_opd_index && -1 != right_opd_index &&  0 == TEST_BIT(
+>                                                                     global_dfv, left_opd_index)  && 0 == TEST_BIT(global_dfv, right_opd_index)) ) 
+>                                                 {
+>                                                         if(-1 != left_opd_index)
+>                                                                 SET_BIT(temp_Gen,left_opd_index);
+>                                                                 /*Can be extended as above.*/
+>                                                         if(-1 != right_opd_index)
+>                                                                 SET_BIT(temp_Gen,right_opd_index);
+>                                                                 /*Can be extended as above.*/
+>                                                 }
+>                                             break;
+>                                         case IGNORE_ENTITY_DEPENDENCE:
+>                                             break;
+>                                 }
+>                                 break;
+>                         }
+>                         break;
+>                 default:
+>                         report_dfa_spec_error ("Wrong entity manipulation in local property computation (Function vars_in_statement_nonseparable)");
+>                         break;
+>         }
+>         ASSERT(temp_Gen);
+>         return temp_Gen;
+> }
+> 
+> static dfvalue 
+> update_gen_of_stmt(tree stmt, lp_specs_nonseparable lps_given, dfvalue globaldfv)
+> {
+>     dfvalue dep_dfvalue, const_dfvalue;
+>     switch (lps_given.entity)
+>     {
+>         case entity_var:
+>             dep_dfvalue = var_in_statement_nonseparable(stmt,lps_given, globaldfv);
+>             const_dfvalue = GEN_OF_STMT(current_pfbv_dfi_of_stmt,stmt);
+>             return union_dfvalues(dep_dfvalue, const_dfvalue);
+>         case entity_expr:
+>             /*To be implemented*/ 
+>             break;
+>         case entity_defn:
+>             /*To be implemented*/ 
+>             break;
+>         default :
+>             report_dfa_spec_error ("Wrong choice of entity in local property computation (Function effect_of_statement)");
+>             break;
+>     }
+> }
+> 
+> static dfvalue
+> update_kill_of_stmt(tree stmt, lp_specs_nonseparable lps_given, dfvalue globaldfv)
+> {
+>     dfvalue dep_dfvalue, const_dfvalue;
+>     switch (lps_given.entity)
+>         {
+>         case entity_var:
+>             dep_dfvalue = var_in_statement_nonseparable(stmt,lps_given, globaldfv);
+>             const_dfvalue = KILL_OF_STMT(current_pfbv_dfi_of_stmt,stmt);
+>             return union_dfvalues(dep_dfvalue, const_dfvalue);
+>         case entity_expr:
+>             /*To be implemented*/ 
+>             break;
+>         case entity_defn:
+>             /*To be implemented*/ 
+>             break;
+>         default :
+>             report_dfa_spec_error ("Wrong choice of entity in local property computation (Function effect_of_statement)");
+>             break;
+>     }
+> }
+> 
+> 
+> static void
+1115c1661
+<         }
+---
+>         } 
+1199a1746,1897
+> dump_entity(FILE * file, dfvalue value)
+> {        
+>         tree expr = NULL;
+>         int i;
+>         
+>         for (i=0; i<relevant_pfbv_entity_count ; i++)
+>         {         
+>                 if (TEST_BIT(value,i))
+>                 {        
+>                         switch (relevant_pfbv_entity)
+>                         {       
+>                                 case entity_expr:
+>                                         expr = local_expr[i]->expr;
+>                                         break;
+>                                 case entity_var:
+>                                         expr = local_var_list[i];
+>                                         break;
+> 				case entity_defn:
+> 					expr = local_defn_list[i];
+> 					break;
+>                                 default:
+>                                         report_dfa_spec_error("Only expressions,variables,definitions are supported at the moment (Function dump_entity_list)");
+>                                         break;
+>                         }
+>                         if (expr)
+>                         {
+>                                 print_generic_expr(file, expr,0);
+>                         }
+>                 }
+>         }
+> }
+> 
+> static void
+> dump_impactchain(FILE* file)
+> {
+>         impact_chain_entity* iter = NULL;
+>         impact_chain_entity* prev = NULL;
+>         if(impact_chain_gen) {
+>                 fprintf(file, "\n\n Gen Impact Chain ************************\n");
+>                 iter = impact_chain_gen;
+>                 
+>                 /*Removing Duplicates*/
+>                 while(iter) {
+>                         prev = iter->next;
+>                         while(prev) {
+>                                 if(0 == prev->do_print) {
+>                                         prev = prev->next;
+>                                         continue;
+>                                 }
+>                                 if(sbitmap_equal(iter->df_1, prev->df_1) && sbitmap_equal(iter->df_2, prev->df_2)) {
+>                                         prev->do_print = 0;
+>                                 }
+>                                 prev = prev->next;
+>                         }      
+>                         iter = iter->next;
+>                 }
+>               
+>                 /*Creating gen_impact_chain.dot for graphically showing impact chains*/
+>                 FILE* gen_dot = fopen("gen_impact_chain.dot", "w");
+>                 fprintf(gen_dot, "digraph G { \n graph [label=\"Gen Impact Chain\"];\nnode [style=filled,peripheries=2, color=gray50];\nedge [arrowhead=vee,decorate ];\n");
+> 
+>                 iter = impact_chain_gen;
+>                 while(iter) {
+>                         if(1 == iter->do_print) {
+>                             dump_entity(file, iter->df_1);        
+>                             fprintf (file, " -> ");
+>                             dump_entity(file, iter->df_2);
+>                             fprintf (file, " :: ");
+>                             print_generic_stmt(file, iter->stmt,0);
+> 
+>                             /* To print:  a -> b   a [label="b :: a = b;"]*/
+>                             dump_entity(gen_dot, iter->df_1);
+>                             fprintf (gen_dot, " -> ");
+>                             dump_entity(gen_dot, iter->df_2);
+> 
+>                             fprintf (gen_dot, "\n");
+>                             dump_entity(gen_dot, iter->df_2);
+>                             fprintf (gen_dot, " [label=\"");
+>                             dump_entity(gen_dot, iter->df_2);
+>                             fprintf (gen_dot, " :: ");
+>                             print_generic_stmt(gen_dot, iter->stmt,0);
+>                             fprintf (gen_dot, " \"];\n");
+>                         }
+>                         iter = iter->next;
+>                 }
+>     
+>                 ggc_free(impact_chain_gen);
+>                 impact_chain_gen = NULL;
+> 
+>                 fprintf(gen_dot, "}\n");
+>                 fclose(gen_dot);
+>         }
+> 
+> 
+>         if(impact_chain_kill) {
+>                 fprintf(file, "\n\n Kill Impact Chain ************************\n");
+>                 iter = impact_chain_kill;
+>                 
+>                 /*Removing Duplicates*/
+>                 while(iter) {
+>                         prev = iter->next;
+>                         while(prev) {
+>                                 if(0 == prev->do_print) {
+>                                         prev = prev->next;
+>                                         continue;
+>                                 }
+>                                 if(sbitmap_equal(iter->df_1, prev->df_1) && sbitmap_equal(iter->df_2, prev->df_2)) {
+>                                         prev->do_print = 0;
+>                                 }
+>                                 prev = prev->next;
+>                         }      
+>                         iter = iter->next;
+>                 }
+> 
+>                 /*Creating kill_impact_chain.dot for graphically showing impact chains*/
+>                 FILE* kill_dot = fopen("kill_impact_chain.dot", "w");
+>                 fprintf(kill_dot, "digraph G {\ngraph [label=\"Kill Impact Chain\"];\nnode [style=filled,peripheries=2, color=gray50];\nedge [arrowhead=vee,decorate ];\n");
+>               
+>                 iter = impact_chain_kill;
+>                 while(iter) {
+>                         if(1 == iter->do_print) {
+>                             dump_entity(file, iter->df_1);        
+>                             fprintf (file, " -> ");
+>                             dump_entity(file, iter->df_2);
+>                             fprintf (file, " :: ");
+>                             print_generic_stmt(file, iter->stmt,0);
+> 
+>                             /* To print:  a -> b   a [label="b :: a = b;"]*/
+>                             dump_entity(kill_dot, iter->df_1);
+>                             fprintf (kill_dot, " -> ");
+>                             dump_entity(kill_dot, iter->df_2);
+> 
+>                             fprintf (kill_dot, "\n");
+>                             dump_entity(kill_dot, iter->df_2);
+>                             fprintf (kill_dot, " [label=\"");
+>                             dump_entity(kill_dot, iter->df_2);
+>                             fprintf (kill_dot, " :: ");
+>                             print_generic_stmt(kill_dot, iter->stmt,0);
+>                             fprintf (kill_dot, " \"];\n");
+>                         }
+>                         iter = iter->next;
+>                 }
+>     
+>                 ggc_free(impact_chain_kill);
+>                 impact_chain_kill = NULL;
+> 
+>                 fprintf(kill_dot, "}\n");
+>                 fclose(kill_dot);
+>         }
+> }
+> 
+> static void
+1203c1901,1902
+< 
+---
+>         block_stmt_iterator bsi;
+>         tree stmt = NULL; 
+1209,1210c1908
+<                 /* DO not print GEN and KILL during iterations */
+<                 if (! in_iterations)
+---
+>                 if(true == is_nonseparable) 
+1212,1220c1910,1957
+<                         if (GEN(current_pfbv_dfi,bb) == NULL)
+<                                 fprintf (stderr, "\nBasic Block %d: Null Gen value\n", find_index_bb(bb));
+<                         else         
+<                         {       
+<                                 fprintf (file, "\n\t----------------------------");
+<                                 fprintf (file, "\n\tGEN Bit Vector: ");
+<                                 dump_dfvalue(file,GEN(current_pfbv_dfi,bb));
+<                                 fprintf (file, "\tGEN Entities:     ");
+<                                 dump_entity_list(file,GEN(current_pfbv_dfi,bb));
+---
+>                         FOR_EACH_STMT_FWD {
+>                                 stmt = bsi_stmt(bsi);
+> 
+>                                 if(-1 == find_index_of_local_stmt(stmt))  continue;                        
+>                                 fprintf(file,"\n");
+>                                 print_generic_stmt(file,stmt,0);
+>                                 if (! in_iterations)
+>                                 {
+> 
+>                                         if (GEN_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL) {
+>                                                fprintf (stderr, "\nStmt  %d: Null Gen value\n", find_index_of_local_stmt(stmt));
+>                                         } else {
+>                                                fprintf (file, "\n\t----------------------------");
+>                                                fprintf (file, "\n\tGEN Bit Vector: ");
+>                                                dump_dfvalue(file,GEN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                                fprintf (file, "\tGEN Entities:     ");
+>                                                dump_entity_list(file,GEN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                         }
+>                                         if (KILL_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL) {
+>                                                fprintf (stderr, "\nStmt  %d: Null Kill value\n", find_index_of_local_stmt(stmt));
+>                                         } else {
+>                                                fprintf (file, "\n\tKILL Bit Vector:");
+>                                                dump_dfvalue(file,KILL_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                                fprintf (file, "\tKILL Entities:    ");
+>                                                dump_entity_list(file,KILL_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                         }
+>                                 }
+> 
+>                                 if (IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL)
+>                                         fprintf (stderr, "\nStmt %d: Null In value\n", find_index_of_local_stmt(stmt));
+>                                 else
+>                                 {
+>                                         fprintf (file, "\n\tIN Bit Vector:  ");
+>                                         dump_dfvalue(file,IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                         fprintf (file, "\tIN Entities:      ");
+>                                         dump_entity_list(file,IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                 }
+> 
+>                                 if (OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL)
+>                                         fprintf (stderr, "\nStmt %d: Null Out value\n", find_index_of_local_stmt(stmt));
+>                                 else
+>                                 {
+>                                         fprintf (file, "\n\tOUT Bit Vector: ");
+>                                         dump_dfvalue(file,OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                         fprintf (file, "\tOUT Entities:     ");
+>                                         dump_entity_list(file,OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                                         fprintf (file, "\n\t------------------------------");
+>                                 }
+1221a1959,1971
+>                 } else { 
+>                         if (! in_iterations)
+>                         {
+>                                 if (GEN(current_pfbv_dfi,bb) == NULL)
+>                                         fprintf (stderr, "\nBasic Block %d: Null Gen value\n", find_index_bb(bb));
+>                                 else         
+>                                 {       
+>                                         fprintf (file, "\n\t----------------------------");
+>                                         fprintf (file, "\n\tGEN Bit Vector: ");
+>                                         dump_dfvalue(file,GEN(current_pfbv_dfi,bb));
+>                                         fprintf (file, "\tGEN Entities:     ");
+>                                         dump_entity_list(file,GEN(current_pfbv_dfi,bb));
+>                                 }
+1223,1224c1973,1986
+<                         if (KILL(current_pfbv_dfi,bb) == NULL)
+<                                 fprintf (stderr, "\nBasic Block %d: Null Kill value\n", find_index_bb(bb));
+---
+>                                 if (KILL(current_pfbv_dfi,bb) == NULL)
+>                                         fprintf (stderr, "\nBasic Block %d: Null Kill value\n", find_index_bb(bb));
+>                                 else 
+>                                 {       
+>                                         fprintf (file, "\n\t------------------------------");
+>                                         fprintf (file, "\n\tKILL Bit Vector:");
+>                                         dump_dfvalue(file,KILL(current_pfbv_dfi,bb));
+>                                         fprintf (file, "\tKILL Entities:    ");
+>                                         dump_entity_list(file,KILL(current_pfbv_dfi,bb));
+>                                 }
+>                         }        
+> 
+>                         if (IN(current_pfbv_dfi,bb) == NULL)
+>                                 fprintf (stderr, "\nBasic Block %d: Null In value\n", find_index_bb(bb));
+1228,1231c1990,1993
+<                                 fprintf (file, "\n\tKILL Bit Vector:");
+<                                 dump_dfvalue(file,KILL(current_pfbv_dfi,bb));
+<                                 fprintf (file, "\tKILL Entities:    ");
+<                                 dump_entity_list(file,KILL(current_pfbv_dfi,bb));
+---
+>                                 fprintf (file, "\n\tIN Bit Vector:  ");
+>                                 dump_dfvalue(file,IN(current_pfbv_dfi,bb));
+>                                 fprintf (file, "\tIN Entities:      ");
+>                                 dump_entity_list(file,IN(current_pfbv_dfi,bb));
+1233d1994
+<                 }        
+1235,1256c1996,2006
+<                 /* Print IN and OUT always */
+<                 if (IN(current_pfbv_dfi,bb) == NULL)
+<                         fprintf (stderr, "\nBasic Block %d: Null In value\n", find_index_bb(bb));
+<                 else 
+<                 {       
+<                         fprintf (file, "\n\t------------------------------");
+<                         fprintf (file, "\n\tIN Bit Vector:  ");
+<                         dump_dfvalue(file,IN(current_pfbv_dfi,bb));
+<                         fprintf (file, "\tIN Entities:      ");
+<                         dump_entity_list(file,IN(current_pfbv_dfi,bb));
+<                 }
+< 
+<                 if (OUT(current_pfbv_dfi,bb) == NULL)
+<                         fprintf (stderr, "\nBasic Block %d: Null Out value\n", find_index_bb(bb));
+<                 else 
+<                 {       
+<                         fprintf (file, "\n\t------------------------------");
+<                         fprintf (file, "\n\tOUT Bit Vector: ");
+<                         dump_dfvalue(file,OUT(current_pfbv_dfi,bb));
+<                         fprintf (file, "\tOUT Entities:     ");
+<                         dump_entity_list(file,OUT(current_pfbv_dfi,bb));
+<                         fprintf (file, "\n\t------------------------------");
+---
+>                         if (OUT(current_pfbv_dfi,bb) == NULL)
+>                                 fprintf (stderr, "\nBasic Block %d: Null Out value\n", find_index_bb(bb));
+>                         else 
+>                         {               
+>                                 fprintf (file, "\n\t------------------------------");
+>                                 fprintf (file, "\n\tOUT Bit Vector: ");
+>                                 dump_dfvalue(file,OUT(current_pfbv_dfi,bb));
+>                                 fprintf (file, "\tOUT Entities:     ");
+>                                 dump_entity_list(file,OUT(current_pfbv_dfi,bb));
+>                                 fprintf (file, "\n\t------------------------------");
+>                         }
+1456a2207,2485
+> static bool
+> is_valid_expr(tree lval, tree expr)
+> {
+>         bool valid;
+> 	int index;
+>         tree op0,op1;
+> 
+> 
+>         fprintf (dump_file,"\n EXPR_TYPE: ");
+>         switch(TREE_CODE(expr))
+>         {
+>                 case MULT_EXPR:
+>                         fprintf (dump_file,"\n\n MULT_EXPR: %d\n", TREE_CODE(expr));
+>                 case PLUS_EXPR:
+>                         fprintf (dump_file,"\n\n PLUS_EXPR: %d\n", TREE_CODE(expr));
+>                 case MINUS_EXPR:
+>                         fprintf (dump_file,"\n\n MINUS_EXPR: %d\n", TREE_CODE(expr));
+>                 case LT_EXPR:
+>                         fprintf (dump_file,"\n\n LT_EXPR: %d\n", TREE_CODE(expr));
+>                 case LE_EXPR:
+>                         fprintf (dump_file,"\n\n LE_EXPR: %d\n", TREE_CODE(expr));
+>                 case GT_EXPR:
+>                         fprintf (dump_file,"\n\n GT_EXPR: %d\n", TREE_CODE(expr));
+>                 case GE_EXPR:
+>                         fprintf (dump_file,"\n\n GE_EXPR: %d\n", TREE_CODE(expr));
+>                 case NE_EXPR:
+>                         fprintf (dump_file,"\n\n NE_EXPR: %d\n", TREE_CODE(expr));
+>                 case EQ_EXPR:
+>                         fprintf (dump_file,"\n\n EQ_EXPR: %d\n", TREE_CODE(expr));
+> 
+>                         fprintf (dump_file,"\n\nexpr type ok\n");
+>                         op0 = extract_operand(expr,0);
+>                         op1 = extract_operand(expr,1);
+>                         if((TREE_CODE(op0) == VAR_DECL || TREE_CODE(op0) == INTEGER_CST) && (TREE_CODE(op1) == VAR_DECL || TREE_CODE(op1) == INTEGER_CST)) {
+>                                 valid = true;
+>                         } else {
+>                                 fprintf (dump_file,"\n\nexpr type NOT ok 1\n");
+>                                 valid = false;
+>                         }
+>                         break;
+>                 case INTEGER_CST:
+>                         fprintf (dump_file,"\n\n INTEGER_CST: %d\nThe expre is : ", TREE_CODE(expr));
+> 			print_generic_expr(dump_file,expr,0);
+>                         valid = false;
+>                         break;
+>                 case REAL_CST:
+>                         fprintf (dump_file,"\n\n REAL_CST: %d\n", TREE_CODE(expr));
+>                         valid = false;
+>                         break;
+>                 case FIXED_CST:
+>                         fprintf (dump_file,"\n\n FIXED_CST: %d\n", TREE_CODE(expr));
+>                         valid = false;
+>                         break;
+>                 case VAR_DECL:
+>                         fprintf (dump_file," VAR_DECL: %d\n", TREE_CODE(expr));
+>                         op0 = extract_operand(expr,0);
+>                         fprintf (dump_file,"\n\n op0 tree code :: %d\n", TREE_CODE(op0));
+>                         if(TREE_CODE(op0) == IDENTIFIER_NODE ) {
+> 				index = find_index_of_local_var(expr);
+>                                 fprintf (dump_file," op1 index: %d\n", index);
+> 				if(-1 != index) {
+>                                     print_generic_expr(dump_file,op0,0);
+>                                 }
+>                         } else {
+>                                fprintf (dump_file,"Only expr is VAR+DECL\n");
+>                         }
+>                         if( TREE_CODE(expr) == VAR_DECL && ENTITY_INDEX(*lval) == ENTITY_INDEX(*expr)) {
+>                                 fprintf(dump_file," CONDITION for a = b; true\n");
+>                         }
+>                         valid = true;
+>                         break;
+>                 default:
+>                         fprintf (dump_file,"\n\n %d  expr type NOT ok 2\n", TREE_CODE(expr));
+>                         valid = false;
+>                         break;
+> 
+>         }
+>         return valid;
+> }
+> 
+> static void 
+> debug_statement_expr(void)
+> {
+>     block_stmt_iterator bsi;
+>     int iter, Lindex, Rindex;
+>     basic_block bb;
+>     tree stmt, expr=NULL, lval=NULL, left_opd=NULL, right_opd=NULL;
+>     for (iter=0; iter < number_of_nodes; iter++) {
+>         bb = VARRAY_BB(dfs_ordered_basic_blocks,iter);
+>         if (bb) {
+>             FOR_EACH_STMT_FWD {
+>                 stmt = bsi_stmt(bsi);
+>                 fprintf (dump_file,"\n\nGiven Statement is ");
+>                 print_generic_stmt(dump_file,stmt,0);
+>                 /*expr = extract_expr(stmt);*/
+>                 fprintf (dump_file,"\n\nStatement Type  is ");
+>                 switch(TREE_CODE(stmt)) {
+>                     case COND_EXPR:
+>                         expr = extract_operand(stmt,0);
+>                         fprintf (dump_file,"\tConditional\n");
+>                         break;
+>                     case MODIFY_EXPR:
+>                         lval = extract_operand(stmt,0);
+>                         expr = extract_operand(stmt,1);
+>                         fprintf (dump_file,"\tModify lval %d\n", find_index_of_local_var(lval));
+>                         break;
+>                     case GIMPLE_MODIFY_STMT:
+>                         lval = extract_operand(stmt,0);
+>                         expr = extract_operand(stmt,1);
+>                         fprintf (dump_file,"\tGimple Modify lval %d\n", find_index_of_local_var(lval));
+>                         break;
+>                     case RETURN_EXPR:
+>                         fprintf (dump_file,"\n\nexpr type : RETURN\n");
+>                         expr = NULL;
+>                         break;
+>                     case CALL_EXPR:
+>                         fprintf (dump_file,"\n\nexpr type : CALL_EXPR\n");
+>                         tree expr_2;
+>                         tree expr_3;
+> 
+>                         expr = extract_operand(stmt,0);
+>                         expr_2 = extract_operand(expr,0);
+> 
+>                         Lindex = find_index_of_local_var(expr);
+>                         fprintf (dump_file,"\n\n Expr code/index for CALL_EXPR: %d/%d \n", TREE_CODE(expr), Lindex);
+>                     print_generic_expr(dump_file,expr,0);
+> 
+>                         Lindex = find_index_of_local_var(expr_2);
+>                         fprintf (dump_file,"\n\n Expr code/index for CALL_EXPR: %d/%d \n", TREE_CODE(expr_2), Lindex);
+>                     print_generic_expr(dump_file,expr,0);
+> 
+>                         /*expr_2 = extract_operand(expr,0);
+>                         fprintf (dump_file,"\n\n Expr code for CALL_EXPR: %d \n", TREE_CODE(expr_2));
+>                     print_generic_expr(dump_file,expr_2,0);
+> 
+>                         expr_3 = extract_operand(expr_2,0);
+>                         fprintf (dump_file,"\n\n Expr code for CALL_EXPR: %d and the arg is %d\n", TREE_CODE(expr_3), Lindex);
+>                     print_generic_expr(dump_file,expr_3,0);
+>                         */
+> 
+>                          return;
+>                         break;
+>                     default:
+>                         fprintf (dump_file,"\tIllegal 2(%d)\n", TREE_CODE(stmt));
+>                         expr = NULL;
+>                         break;
+>                 }
+>                 //fprintf(dump_file, "index of expr : %d \n", find_index_of_local_expr(expr));
+>                 if(NULL == expr || false == is_valid_expr(lval, expr))
+>                     expr = NULL;
+> 
+> 
+>                 fprintf (dump_file, "\t Expression is ");
+>                 if (expr) {
+>                     print_generic_expr(dump_file,expr,0);
+> 
+>                     left_opd = extract_operand(expr,0);
+>                     right_opd = extract_operand(expr,1);
+>                     Lindex = find_index_of_local_var(left_opd);
+>                     Rindex = find_index_of_local_var(right_opd);
+>                    
+>                     fprintf (dump_file,"\t Its operands are(%d,%d) :", Lindex, Rindex);
+> 
+>                     if(-1 != Lindex) {
+>                         print_generic_expr(dump_file,left_opd,0);
+> 	            }
+>                     if(-1 != Rindex) {
+>                         fprintf (dump_file,"\t and :");
+>                         print_generic_expr(dump_file,right_opd,0);
+>                     }
+>                 } else {
+>                     fprintf (dump_file,"\t NULL\n");
+>                 }
+>                 fprintf (dump_file, "\t --------------------------\n\n ");
+>             }
+>         }
+>     }
+> }
+> 
+> static void
+> print_dfi(FILE * file) 
+> {
+>         int iter;
+>         tree stmt = NULL;
+> 
+>         for (iter=0; iter < local_stmt_count; iter++)
+>         {
+>                 
+>                 stmt = local_stmt_list[iter];
+>                 fprintf (file, "\nCurrent Stmt : ");
+>                 print_generic_stmt(file,stmt,0);
+>                 if (GEN_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL)
+>                         fprintf (stderr, "\nStmt  %d: Null Gen value\n", iter);
+>                 else
+>                 {
+>                         fprintf (file, "\n\t----------------------------");
+>                         fprintf (file, "\n\tGEN Bit Vector: ");
+>                         dump_dfvalue(file,GEN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                         fprintf (file, "\tGEN Entities:     ");
+>                         dump_entity_list(file,GEN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                 }
+> 
+>                 if (KILL_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL)
+>                         fprintf (stderr, "\nStmt  %d: Null Kill value\n", iter);
+>                 else
+>                 {
+>                         fprintf (file, "\n\tKILL Bit Vector:");
+>                         dump_dfvalue(file,KILL_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                         fprintf (file, "\tKILL Entities:    ");
+>                         dump_entity_list(file,KILL_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                 }
+> 
+>                 if (IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL)
+>                         fprintf (stderr, "\nStmt %d: Null In value\n", iter);
+>                 else
+>                 {     
+>                         fprintf (file, "\n\tIN Bit Vector:  ");
+>                         dump_dfvalue(file,IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                         fprintf (file, "\tIN Entities:      ");
+>                         dump_entity_list(file,IN_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                 }
+> 
+>                 if (OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt) == NULL)
+>                         fprintf (stderr, "\nStmt %d: Null Out value\n", iter);
+>                 else
+>                 {     
+>                         fprintf (file, "\n\tOUT Bit Vector: ");
+>                         dump_dfvalue(file,OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                         fprintf (file, "\tOUT Entities:     ");
+>                         dump_entity_list(file,OUT_OF_STMT(current_pfbv_dfi_of_stmt,stmt));
+>                         fprintf (file, "\n\t------------------------------");
+>                 }
+>         }
+> }
+> 
+> 
+> static void 
+> create_impactchain(int df_1, int df_2, entity_dependence dependence, dfvalue global_dfv, tree stmt)
+> {
+>         if(kill_lps.dependence == dependence) { 
+>                 if(TEST_BIT(global_dfv, df_2)) {
+>                         impact_chain_entity* new = (impact_chain_entity *)ggc_alloc_cleared(sizeof( impact_chain_entity));
+>                         new->df_1 = make_initialised_dfvalue(ZEROS);
+>                         new->df_2 = make_initialised_dfvalue(ZEROS);
+>                         SET_BIT(new->df_1, df_1);
+>                         SET_BIT(new->df_2, df_2);
+>                         new->next = NULL;
+>                         new->do_print = 1;
+>                         new->stmt     = stmt;
+>    
+>                         if(NULL == impact_chain_kill) {
+>                                 impact_chain_kill = new;
+>                         } else {
+>                                 new->next = impact_chain_kill;
+>                                 impact_chain_kill = new;
+>                         }
+>                 }
+>         } else if(gen_lps.dependence == dependence) { 
+>                 if(0 == TEST_BIT(global_dfv, df_2)) {
+>                         impact_chain_entity* new = (impact_chain_entity *)ggc_alloc_cleared(sizeof( impact_chain_entity));
+>                         new->df_1 = make_initialised_dfvalue(ZEROS);
+>                         new->df_2 = make_initialised_dfvalue(ZEROS);
+>                         SET_BIT(new->df_1, df_1);
+>                         SET_BIT(new->df_2, df_2);
+>                         new->next = NULL;
+>                         new->do_print = 1;
+>                         new->stmt     = stmt;
+>    
+>                         if(NULL == impact_chain_gen) {
+>                                 impact_chain_gen = new;
+>                         } else {
+>                                 new->next = impact_chain_gen;
+>                                 impact_chain_gen = new;
+>                         }
+>                 
+>                 }
+>         }
+> }
+> 
+Index: gimple-pfbvdfa-specs.c
+===================================================================
+RCS file: /home/dsand/cvs/gcc-4.3.0/gcc/gimple-pfbvdfa-specs.c,v
+retrieving revision 1.1.1.1
+retrieving revision 1.3
+diff -r1.1.1.1 -r1.3
+47a48,49
+>         - faint variable analysis
+>         - possibly uninitialised variable analysis
+78c80,88
+<         stop_flow_along_node           /* backward_node_flow      */
+---
+>         stop_flow_along_node,          /* backward_node_flow      */
+>         /*@Non-separable : START*/
+>         IGNORE_STATEMENT_TYPE,         /* constgen_statement_type */
+>         IGNORE_PRECONDITION,           /* constgen_precondition   */
+>         IGNORE_STATEMENT_TYPE,         /* constkill_statement_type*/
+>         IGNORE_PRECONDITION,           /* constkill_precondition  */
+>         IGNORE_ENTITY_DEPENDENCE,      /* dependent_gen           */
+>         IGNORE_ENTITY_DEPENDENCE       /* dependent_kill          */
+>         /*@Non-separable : END*/
+132c142,150
+<         stop_flow_along_node           /* backward_node_flow      */
+---
+>         stop_flow_along_node,          /* backward_node_flow      */
+>         /*@Non-separable : START*/
+>         IGNORE_STATEMENT_TYPE,         /* constgen_statement_type */
+>         IGNORE_PRECONDITION,           /* constgen_precondition   */
+>         IGNORE_STATEMENT_TYPE,         /* constkill_statement_type*/
+>         IGNORE_PRECONDITION,           /* constkill_precondition  */
+>         IGNORE_ENTITY_DEPENDENCE,      /* dependent_gen           */
+>         IGNORE_ENTITY_DEPENDENCE       /* dependent_kill          */
+>         /*@Non-separable : END*/
+184c202,210
+<         backward_gen_kill_node_flow    /* backward_node_flow      */
+---
+>         backward_gen_kill_node_flow,   /* backward_node_flow      */
+>         /*@Non-separable : START*/
+>         IGNORE_STATEMENT_TYPE,         /* constgen_statement_type */
+>         IGNORE_PRECONDITION,           /* constgen_precondition   */
+>         IGNORE_STATEMENT_TYPE,         /* constkill_statement_type*/
+>         IGNORE_PRECONDITION,           /* constkill_precondition  */
+>         IGNORE_ENTITY_DEPENDENCE,      /* dependent_gen           */
+>         IGNORE_ENTITY_DEPENDENCE       /* dependent_kill          */
+>         /*@Non-separable : END*/
+236c262,270
+<         backward_gen_kill_node_flow   /* backward_node_flow      */
+---
+>         backward_gen_kill_node_flow,  /* backward_node_flow      */
+>         /*@Non-separable : START*/
+>         IGNORE_STATEMENT_TYPE,         /* constgen_statement_type */
+>         IGNORE_PRECONDITION,           /* constgen_precondition   */
+>         IGNORE_STATEMENT_TYPE,         /* constkill_statement_type*/
+>         IGNORE_PRECONDITION,           /* constkill_precondition  */
+>         IGNORE_ENTITY_DEPENDENCE,      /* dependent_gen           */
+>         IGNORE_ENTITY_DEPENDENCE       /* dependent_kill          */
+>         /*@Non-separable : END*/
+315c349,357
+<         backward_node_flow_pre         /* backward_node_flow      */
+---
+>         backward_node_flow_pre,        /* backward_node_flow      */
+>         /*@Non-separable : START*/
+>         IGNORE_STATEMENT_TYPE,         /* constgen_statement_type */
+>         IGNORE_PRECONDITION,           /* constgen_precondition   */
+>         IGNORE_STATEMENT_TYPE,         /* constkill_statement_type*/
+>         IGNORE_PRECONDITION,           /* constkill_precondition  */
+>         IGNORE_ENTITY_DEPENDENCE,      /* dependent_gen           */
+>         IGNORE_ENTITY_DEPENDENCE       /* dependent_kill          */
+>         /*@Non-separable : END*/
+391c433,441
+<         stop_flow_along_node           /* backward_node_flow      */
+---
+>         stop_flow_along_node,          /* backward_node_flow      */
+>         /*@Non-separable : START*/
+>         IGNORE_STATEMENT_TYPE,         /* constgen_statement_type */
+>         IGNORE_PRECONDITION,           /* constgen_precondition   */
+>         IGNORE_STATEMENT_TYPE,         /* constkill_statement_type*/
+>         IGNORE_PRECONDITION,           /* constkill_precondition  */
+>         IGNORE_ENTITY_DEPENDENCE,      /* dependent_gen           */
+>         IGNORE_ENTITY_DEPENDENCE       /* dependent_kill          */
+>         /*@Non-separable : END*/
+422a473,592
+> /*@Non-separable : START*/
+> /************* Specification of faint variables  *****************/
+> 
+> pfbv_dfi ** FV_pfbv_dfi = NULL;
+> 
+> static unsigned int gimple_pfbv_fv_dfa(void);
+> 
+> 
+> struct gimple_pfbv_dfa_spec gdfa_fv =
+> {
+>         entity_var,                          /* entity;                 */
+>         ONES,                                /* top_value;              */
+>         ONES,                                /* entry_info;             */
+>         ONES,                                /* exit_info;              */
+>         BACKWARD,                            /* traversal_order;        */
+>         INTERSECTION,                        /* confluence;             */
+>         entity_mod,                          /* gen_effect;             */
+>         up_exp,                              /* gen_exposition;         */
+>         entity_use,                          /* kill_effect;            */
+>         any_where,                           /* kill_exposition;        */
+>         global_only,                         /* preserved_dfi;          */
+>         stop_flow_along_edge,                /* forward_edge_flow       */
+>         identity_backward_edge_flow,         /* backward_edge_flow      */
+>         stop_flow_along_node,                /* forward_node_flow       */
+>         backward_gen_kill_node_flow,         /* backward_node_flow      */
+>         READ_X,                              /* constgen_statement_type */
+>         X_NOT_IN_OPERAND,                    /* constgen_precondition   */
+>         USE_X,                               /* constkill_statement_type*/
+>         IGNORE_PRECONDITION,                 /* constkill_precondition  */
+>         IGNORE_ENTITY_DEPENDENCE,            /* dependent_gen           */
+>         X_NOT_IN_GLOBAL_DATA_FLOW_VALUE      /* dependent_kill          */
+> };
+> 
+> 
+> static unsigned int
+> gimple_pfbv_fv_dfa(void)
+> {
+>         FV_pfbv_dfi = gdfa_driver(gdfa_fv);
+> 
+>         return 0;
+> }
+> 
+> 
+> struct tree_opt_pass pass_gimple_pfbv_fv_dfa =
+> {
+>   "gdfa_fv",                          /* name */
+>   NULL,                               /* gate */
+>   gimple_pfbv_fv_dfa,                 /* execute */
+>   NULL,                               /* sub */
+>   NULL,                               /* next */
+>   0,                                  /* static_pass_number */
+>   0,                                  /* tv_id */
+>   0,                                  /* properties_required */
+>   0,                                  /* properties_provided */
+>   0,                                  /* properties_destroyed */
+>   0,                                  /* todo_flags_start */
+>   0,                                  /* todo_flags_finish */
+>   0                                   /* letter */
+> };
+> 
+> /************* Specification of possibly uninitialised variable analysis  *****************/
+> 
+> pfbv_dfi ** PUV_pfbv_dfi = NULL;
+> 
+> static unsigned int gimple_pfbv_puv_dfa(void);
+> 
+> 
+> struct gimple_pfbv_dfa_spec gdfa_puv =
+> {
+>         entity_var,                                /* entity;                 */
+>         ZEROS,                                     /* top_value;              */
+>         ONES,                                      /* entry_info;             */
+>         ZEROS,                                     /* exit_info;              */
+>         FORWARD,                                   /* traversal_order;        */
+>         UNION,                                     /* confluence;             */
+>         entity_mod,                                /* gen_effect;             */
+>         up_exp,                                    /* gen_exposition;         */
+>         entity_mod,                                /* kill_effect;            */
+>         any_where,                                 /* kill_exposition;        */
+>         global_only,                               /* preserved_dfi;          */
+>         identity_forward_edge_flow,                /* forward_edge_flow       */
+>         stop_flow_along_edge,                      /* backward_edge_flow      */
+>         forward_gen_kill_node_flow,                /* forward_node_flow       */
+>         stop_flow_along_node,                      /* backward_node_flow      */
+>         IGNORE_STATEMENT_TYPE,                     /* constgen_statement_type */
+>         IGNORE_PRECONDITION,                       /* constgen_precondition   */
+>         READ_X,                                    /* constkill_statement_type*/
+>         OPERAND_IS_CONST,                          /* constkill_precondition  */
+>         OPER_IN_GLOBAL_DATA_FLOW_VALUE,            /* dependent_gen           */
+>         OPER_NOT_IN_GLOBAL_DATA_FLOW_VALUE         /* dependent_kill          */
+> };
+> 
+> 
+> static unsigned int
+> gimple_pfbv_puv_dfa(void)
+> {
+>         PUV_pfbv_dfi = gdfa_driver(gdfa_puv);
+> 
+>         return 0;
+> }
+> 
+> 
+> struct tree_opt_pass pass_gimple_pfbv_puv_dfa =
+> {
+>   "gdfa_puv",                         /* name */
+>   NULL,                               /* gate */
+>   gimple_pfbv_puv_dfa,                /* execute */
+>   NULL,                               /* sub */
+>   NULL,                               /* next */
+>   0,                                  /* static_pass_number */
+>   0,                                  /* tv_id */
+>   0,                                  /* properties_required */
+>   0,                                  /* properties_provided */
+>   0,                                  /* properties_destroyed */
+>   0,                                  /* todo_flags_start */
+>   0,                                  /* todo_flags_finish */
+>   0                                   /* letter */
+> };
+> 
+> /*@Non-separable : END*/
+Index: gimple-pfbvdfa-support.c
+===================================================================
+RCS file: /home/dsand/cvs/gcc-4.3.0/gcc/gimple-pfbvdfa-support.c,v
+retrieving revision 1.1.1.1
+retrieving revision 1.4
+diff -r1.1.1.1 -r1.4
+99a100,104
+> /*@Non-separable : START*/
+> /*initial  allocation of memory while storing statements */
+> int s_old_size_local=1000,s_new_size_local=100;	
+> /*@Non-separable : END*/
+> 
+104a110,112
+> /*@Non-separable : START*/
+> int local_stmt_count=0;
+> /*@Non-separable : END*/
+113a122,124
+> /*@Non-separable : START*/
+> tree * local_stmt_list = NULL;
+> /*@Non-separable : END*/
+124a136,138
+> /*@Non-separable : START*/
+> void assign_indices_to_stmt(void);
+> /*@Non-separable : END*/
+157a172,175
+> /*@Non-separable : START*/
+> static bool is_valid_stmt(tree stmt);
+> int find_index_of_local_stmt(tree stmt);
+> /*@Non-separable : END*/
+457a476,516
+> /*@Non-separable : START*/
+> void 
+> assign_indices_to_stmt(void)
+> {
+>         basic_block bb;
+>         int index;
+>         block_stmt_iterator bsi;
+>         tree stmt = NULL, lval = NULL;
+> 
+>         /*data structure to store all statements TO DO : free local_stmt_list*/ 
+>         local_stmt_list = (tree *)ggc_alloc_cleared(sizeof(tree )*s_old_size_local);
+> 
+>         FOR_EACH_BB_FWD(ENTRY_BLOCK_PTR) 
+>         {
+>                 FOR_EACH_STMT_FWD 
+>                 {
+>                         stmt = bsi_stmt(bsi);
+>                         if(is_valid_stmt(stmt)) 
+>                         {
+>                                 if(local_stmt_count == s_old_size_local) {
+>                                         s_old_size_local += s_new_size_local;
+>                                         local_stmt_list =(tree *) ggc_realloc(local_stmt_list,sizeof(tree )*s_old_size_local);
+>                                 }
+> 
+>                                 lval = extract_operand(stmt,0);
+>                                 index = ENTITY_INDEX(*lval);
+> 
+>                                 if(-1 != index) 
+>                                 {
+>                                         ENTITY_INDEX(*stmt) = local_stmt_count;
+>                                         local_stmt_list[local_stmt_count] = stmt;
+>                                         local_stmt_count++;
+>                                 } else {
+>                                         ENTITY_INDEX(*stmt) = -1;
+>                                 }
+>                         }
+>                 }
+>         }
+> }
+> /*@Non-separable : END*/
+> 
+833a893,907
+> 
+> /*@Non-separable : START*/
+> int
+> find_index_of_local_stmt(tree stmt)
+> {
+>         int index=-1;
+>         if(stmt && is_valid_stmt(stmt))
+>         {
+>                 index = ENTITY_INDEX(*stmt);
+>         }
+> 
+>         return index;
+> }
+> /*@Non-separable : END*/
+> 
+899a974,987
+> static bool
+> is_valid_stmt(tree stmt)
+> {
+>     switch(TREE_CODE(stmt)) {
+>         case COND_EXPR:
+>         case GIMPLE_MODIFY_STMT:
+>         case MODIFY_EXPR:
+>             return true;
+>         default:
+>             return false;
+>     }
+> }
+> 
+> 
+Index: gimple-pfbvdfa.h
+===================================================================
+RCS file: /home/dsand/cvs/gcc-4.3.0/gcc/gimple-pfbvdfa.h,v
+retrieving revision 1.1.1.1
+retrieving revision 1.5
+diff -r1.1.1.1 -r1.5
+64a65,74
+> /*@Non-separable : START*/
+> #define GEN_OF_STMT(dfi,stmt)     ((dfi)[find_index_of_local_stmt(stmt)]->gen)
+> #define KILL_OF_STMT(dfi,stmt)    ((dfi)[find_index_of_local_stmt(stmt)]->kill)
+> #define IN_OF_STMT(dfi,stmt)      ((dfi)[find_index_of_local_stmt(stmt)]->in)
+> #define OUT_OF_STMT(dfi,stmt)     ((dfi)[find_index_of_local_stmt(stmt)]->out)
+> #define GEN_OF_STMT_nid(dfi,nid)   ((dfi)[nid]->gen)
+> #define KILL_OF_STMT_nid(dfi,nid)   ((dfi)[nid]->kill)
+> #define IN_OF_STMT_nid(dfi,nid)   ((dfi)[nid]->in)
+> #define OUT_OF_STMT_nid(dfi,nid)   ((dfi)[nid]->out)
+> /*@Non-separable : END*/
+141a152,211
+> /*@Non-separable : START*/
+> /*The statements revevent to datatflow analysis are:
+> **    (A) Assignment statements x =e where x E Var, e E Expr.
+> **    (B) Input Statements read(x), which assigns new value to x.
+> **    (C) Use Statemets use(x) which includes condition checking, printing, parameter passing.
+> **    (D) other Statemets.
+> */
+> typedef enum statement_type
+>                {
+>                         READ_X = 1,
+>                         USE_X,
+>                         IGNORE_STATEMENT_TYPE
+>                } statement_type;
+> 
+> 
+> /*For the statement x =e, 'precond' are the conditions need to be checked before
+> **cosidering the data flow value.
+> */
+> typedef enum precondition
+>                {
+>                         X_IN_OPERAND = 1,
+>                         X_NOT_IN_OPERAND,
+>                         OPERAND_IS_CONST,
+>                         OPERAND_ISNOT_CONST,
+>                         IGNORE_PRECONDITION
+>                } precondition;
+> 
+> 
+> /*For the statement x = e, the corresponding dataflow value may depend on the 
+> **global dataflow value ae well.(This is true for non-separable frameworks)
+> */
+> typedef enum entity_dependence
+>                {
+>                         X_IN_GLOBAL_DATA_FLOW_VALUE = 1,
+>                         X_NOT_IN_GLOBAL_DATA_FLOW_VALUE,
+>                         OPER_IN_GLOBAL_DATA_FLOW_VALUE,
+>                         OPER_NOT_IN_GLOBAL_DATA_FLOW_VALUE,
+>                         IGNORE_ENTITY_DEPENDENCE
+>                } entity_dependence;
+> 
+> typedef struct impact_chain_entity
+>                {
+>                         dfvalue                     df_1;
+>                         dfvalue                     df_2;
+>                         struct impact_chain_entity* next;
+>                         int                         do_print;
+>                         tree                        stmt;
+>                } impact_chain_entity;
+> 
+> typedef struct lp_specs_nonseparable 
+>                {
+>                         entity_name         entity;
+>                         entity_manipulation stmt_effect;
+>                         statement_type      read_or_use_stmt;
+>                         precondition        precondition;
+>                         entity_dependence   dependence;
+>                } lp_specs_nonseparable;
+> 
+> /*@Non-separable : END*/
+> 
+162c232,239
+< 
+---
+>         /*@Non-separable : START*/
+>         statement_type            constgen_statement_type;
+>         precondition              constgen_precondition;
+>         statement_type            constkill_statement_type;
+>         precondition              constkill_precondition;
+>         entity_dependence         dependent_gen;
+>         entity_dependence         dependent_kill;
+>         /*@Non-separable : END*/
+Index: passes.c
+===================================================================
+RCS file: /home/dsand/cvs/gcc-4.3.0/gcc/passes.c,v
+retrieving revision 1.1.1.1
+retrieving revision 1.2
+diff -r1.1.1.1 -r1.2
+493a494,497
+>   /*@Non-separable : START*/
+>   NEXT_PASS (pass_gimple_pfbv_fv_dfa);
+>   NEXT_PASS (pass_gimple_pfbv_puv_dfa);
+>   /*@Non-separable : END*/
+Index: tree-pass.h
+===================================================================
+RCS file: /home/dsand/cvs/gcc-4.3.0/gcc/tree-pass.h,v
+retrieving revision 1.1.1.1
+retrieving revision 1.2
+diff -r1.1.1.1 -r1.2
+458a459,462
+> /*@Non-separable : START*/
+> extern struct tree_opt_pass pass_gimple_pfbv_fv_dfa;
+> extern struct tree_opt_pass pass_gimple_pfbv_puv_dfa;
+> /*@Non-separable : END*/

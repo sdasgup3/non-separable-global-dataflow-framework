@@ -1,0 +1,47 @@
+test ()
+{
+  int a;
+  int b;
+  int c;
+  int d;
+
+  d = 0;
+  goto <D.1574>;
+  <D.1573>:;
+  if (d > 1)
+    {
+      a = b;
+    }
+  else
+    {
+      if (d > 0)
+        {
+          b = c;
+        }
+      else
+        {
+          c = 9;
+        }
+    }
+  d = d + 1;
+  <D.1574>:;
+  if (d > 2)
+    {
+      goto <D.1573>;
+    }
+  else
+    {
+      goto <D.1575>;
+    }
+  <D.1575>:;
+  if (a > 1)
+    {
+      printf (&"dsada"[0]);
+    }
+  else
+    {
+      
+    }
+}
+
+

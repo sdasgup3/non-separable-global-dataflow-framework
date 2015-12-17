@@ -1,0 +1,8 @@
+digraph G { 
+ graph [label="Gen Impact Chain"];
+node [style=filled,peripheries=2, color=gray50];
+edge [arrowhead=vee,decorate ];
+d -> b
+b [label="b :: b = d;
+ "];
+}

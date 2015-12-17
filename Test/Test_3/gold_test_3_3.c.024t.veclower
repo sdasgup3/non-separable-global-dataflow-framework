@@ -1,0 +1,61 @@
+
+;; Function test (test)
+
+test ()
+{
+  int d;
+  int c;
+  int b;
+  int a;
+
+<bb 2>:
+  d = 0;
+  goto <bb 9>;
+
+<bb 3>:
+  if (d > 1)
+    goto <bb 4>;
+  else
+    goto <bb 5>;
+
+<bb 4>:
+  a = b;
+  goto <bb 8>;
+
+<bb 5>:
+  if (d > 0)
+    goto <bb 6>;
+  else
+    goto <bb 7>;
+
+<bb 6>:
+  b = c;
+  goto <bb 8>;
+
+<bb 7>:
+  c = 9;
+
+<bb 8>:
+  d = d + 1;
+
+<bb 9>:
+  if (d > 2)
+    goto <bb 3>;
+  else
+    goto <bb 10>;
+
+<bb 10>:
+  if (a > 1)
+    goto <bb 11>;
+  else
+    goto <bb 12>;
+
+<bb 11>:
+  printf (&"dsada"[0]);
+
+<bb 12>:
+  return;
+
+}
+
+

@@ -1,0 +1,46 @@
+graph: { title: "test"
+node: { title: "ENTRY" label: "ENTRY" }
+node: { title: "EXIT" label: "EXIT" }
+edge: { sourcename: "ENTRY" targetname: "2" linestyle: solid priority: 100 }
+
+node: { title: "2" label: "#2\ngimple_modify_stmt (6)\ngimple_modify_stmt (6)"}
+edge: { sourcename: "2" targetname: "3" priority: 100 linestyle: solid }
+
+node: { title: "3" label: "#3\nlabel_expr (7)\ncond_expr (7)"}
+edge: { sourcename: "3" targetname: "4" priority: 100 linestyle: solid }
+edge: { sourcename: "3" targetname: "7" priority: 100 linestyle: solid }
+
+node: { title: "4" label: "#4\ncond_expr (8)\ncond_expr (8)"}
+edge: { sourcename: "4" targetname: "5" priority: 100 linestyle: solid }
+edge: { sourcename: "4" targetname: "6" priority: 100 linestyle: solid }
+
+node: { title: "5" label: "#5\ncall_expr (9)\ncall_expr (9)"}
+edge: { sourcename: "5" targetname: "6" priority: 100 linestyle: solid }
+
+node: { title: "6" label: "#6\nno-statement (0)\nno-statement (0)"}
+edge: { sourcename: "6" targetname: "13" priority: 100 linestyle: solid }
+
+node: { title: "7" label: "#7\ncond_expr (12)\ncond_expr (12)"}
+edge: { sourcename: "7" targetname: "8" priority: 100 linestyle: solid }
+edge: { sourcename: "7" targetname: "9" priority: 100 linestyle: solid }
+
+node: { title: "8" label: "#8\ngimple_modify_stmt (13)\ngimple_modify_stmt (13)"}
+edge: { sourcename: "8" targetname: "12" priority: 100 linestyle: solid }
+
+node: { title: "9" label: "#9\ncond_expr (15)\ncond_expr (15)"}
+edge: { sourcename: "9" targetname: "10" priority: 100 linestyle: solid }
+edge: { sourcename: "9" targetname: "11" priority: 100 linestyle: solid }
+
+node: { title: "10" label: "#10\ngimple_modify_stmt (16)\ngimple_modify_stmt (16)"}
+edge: { sourcename: "10" targetname: "12" priority: 100 linestyle: solid }
+
+node: { title: "11" label: "#11\ngimple_modify_stmt (18)\ngimple_modify_stmt (18)"}
+edge: { sourcename: "11" targetname: "12" priority: 100 linestyle: solid }
+
+node: { title: "12" label: "#12\ngimple_modify_stmt (21)\ngimple_modify_stmt (21)"}
+edge: { sourcename: "12" targetname: "3" priority: 100 linestyle: solid }
+
+node: { title: "13" label: "#13\nreturn_expr (25)\nreturn_expr (25)"}
+edge: { sourcename: "13" targetname: "EXIT" priority: 100 linestyle: solid }
+}
+

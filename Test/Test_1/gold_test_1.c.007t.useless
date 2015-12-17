@@ -1,0 +1,83 @@
+
+;; Function exmp (exmp)
+
+exmp ()
+{
+  int x.0;
+  int y.1;
+  int y.2;
+  int x.3;
+  int D.1197;
+  int y.4;
+  int x.5;
+  int D.1200;
+  int D.1201;
+  int z.6;
+  int x.7;
+  int D.1204;
+  int D.1205;
+  int a;
+  int b;
+  int c;
+  int d;
+
+  b = 4;
+  a = b + c;
+  d = a * b;
+  x.0 = x;
+  y.1 = y;
+  if (x.0 < y.1)
+    {
+      b = a - c;
+    }
+  else
+    {
+      <D.1190>:;
+      c = b + c;
+      y.2 = y;
+      x.3 = x;
+      if (y.2 > x.3)
+        {
+          <D.1187>:;
+          d = a + b;
+          D.1197 = b + c;
+          f (D.1197);
+          y.4 = y;
+          x.5 = x;
+          if (y.4 > x.5)
+            {
+              goto <D.1187>;
+            }
+          else
+            {
+              goto <D.1188>;
+            }
+          <D.1188>:;
+        }
+      else
+        {
+          c = a * b;
+          D.1200 = a - b;
+          f (D.1200);
+        }
+      D.1201 = a + b;
+      g (D.1201);
+      z.6 = z;
+      x.7 = x;
+      if (z.6 > x.7)
+        {
+          goto <D.1190>;
+        }
+      else
+        {
+          goto <D.1191>;
+        }
+      <D.1191>:;
+    }
+  D.1204 = a - c;
+  h (D.1204);
+  D.1205 = b + c;
+  f (D.1205);
+}
+
+

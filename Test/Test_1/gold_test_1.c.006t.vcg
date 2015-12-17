@@ -1,0 +1,34 @@
+graph: { title: "exmp"
+node: { title: "ENTRY" label: "ENTRY" }
+node: { title: "EXIT" label: "EXIT" }
+edge: { sourcename: "ENTRY" targetname: "2" linestyle: solid priority: 100 }
+
+node: { title: "2" label: "#2\ngimple_modify_stmt (4)\ncond_expr (7)"}
+edge: { sourcename: "2" targetname: "3" priority: 100 linestyle: solid }
+edge: { sourcename: "2" targetname: "4" priority: 100 linestyle: solid }
+
+node: { title: "3" label: "#3\ngimple_modify_stmt (8)\ngimple_modify_stmt (8)"}
+edge: { sourcename: "3" targetname: "9" priority: 100 linestyle: solid }
+
+node: { title: "4" label: "#4\ngimple_modify_stmt (11)\ncond_expr (12)"}
+edge: { sourcename: "4" targetname: "5" priority: 100 linestyle: solid }
+edge: { sourcename: "4" targetname: "7" priority: 100 linestyle: solid }
+
+node: { title: "5" label: "#5\ngimple_modify_stmt (14)\ncond_expr (16)"}
+edge: { sourcename: "5" targetname: "5" priority: 100 linestyle: solid }
+edge: { sourcename: "5" targetname: "6" priority: 100 linestyle: solid }
+
+node: { title: "6" label: "#6\nno-statement (0)\nno-statement (0)"}
+edge: { sourcename: "6" targetname: "8" priority: 100 linestyle: solid }
+
+node: { title: "7" label: "#7\ngimple_modify_stmt (18)\ncall_expr (19)"}
+edge: { sourcename: "7" targetname: "8" priority: 100 linestyle: solid }
+
+node: { title: "8" label: "#8\ngimple_modify_stmt (21)\ncond_expr (22)"}
+edge: { sourcename: "8" targetname: "4" priority: 100 linestyle: solid }
+edge: { sourcename: "8" targetname: "9" priority: 100 linestyle: solid }
+
+node: { title: "9" label: "#9\ngimple_modify_stmt (24)\nreturn_expr (26)"}
+edge: { sourcename: "9" targetname: "EXIT" priority: 100 linestyle: solid }
+}
+

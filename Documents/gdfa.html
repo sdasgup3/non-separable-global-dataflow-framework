@@ -1,0 +1,269 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<html><head lang="en"><!--
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+  <title>gdfa.html</title>
+</head>
+-->
+
+
+
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="author" content="abhijat vichare">
+<!-- base href="http://www.cse.iitb.ac.in/grc/" -->
+<title>
+GCC Resource Center
+</title>
+<link rel="stylesheet" type="text/css" charset="us-ascii" href="gdfa_files/main.css">
+<!--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Main Head
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-->
+</head><body>
+<div class="GrcTitle">
+<table>
+  <tbody>
+    <tr>
+      <td>
+      <a href="http://www.iitb.ac.in/">
+        <img src="gdfa_files/iitblogo.png" alt="IIT Bombay">
+        </a>
+      </td>
+      <td>
+         <table>
+         <tbody><tr>
+         <td>
+         <img src="gdfa_files/grc.png" alt="GCC Resource Center">
+         </td>
+         <td>
+         <img src="gdfa_files/grc-title-cse.png" usemap="#map" width="450" border="0" height="60">
+
+         <map name="map">
+         <!-- #$-:Image map file created by GIMP Image Map plug-in -->
+         <!-- #$-:GIMP Image Map plug-in by Maurits Rijk -->
+         <!-- #$-:Please do not edit lines starting with "#$" -->
+         <!-- #$VERSION:2.3 -->
+         <!-- #$AUTHOR:root -->
+         <area shape="rect" coords="3,38,445,63" alt="Department of Computer Science &amp; Engg." href="http://www.cse.iitb.ac.in/">
+         </map>
+         </td>
+         </tr>
+         </tbody></table>
+      </td>
+      <td>
+      <a href="http://gcc.gnu.org/">
+        <img src="gdfa_files/small-gccegg-65.png" alt="IIT Bombay">
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="sidebar"> <!-- Menu bar starts -->
+   <div class="menuitem">
+   <!-- Google Search -->
+<table>
+  <tbody><tr>
+    <td>
+      <input name="q" size="22" maxlength="255" value="GCC Docs" type="text">
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <input name="domains" value="http://www.cse.iitb.ac.in/grc/" type="hidden">
+      <input name="sitesearch" value="" type="radio">WWW        
+      <input name="sitesearch" value="http://www.cse.iitb.ac.in/grc/" checked="checked" type="radio">GRC
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <input value="Google Search" type="submit">
+    </td>
+  </tr>
+</tbody></table>
+<!-- End Google Search -->
+   </div>
+<br>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/grc/">
+   Home
+   </a>
+   </div>
+<br>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/grc/about.html">
+   About GRC
+   </a>
+   </div>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/grc/activities.html">
+   Activities
+   </a>
+   </div>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/grc/gccdocs.html">
+   GCC Internals Docs
+   </a>
+   </div>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/grc/gcclinks.html">
+   GCC Related Links
+   </a>
+   </div>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/grc/downloads.html">
+   Downloads
+   </a>
+   </div>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/grc/people.html">
+   People
+   </a>
+   </div>
+<br>
+   <div class="menuitem">
+   <a href="http://www.iitb.ac.in/">
+   IIT Bombay 
+   </a>
+   </div>
+   <div class="menuitem">
+   <a href="http://www.cse.iitb.ac.in/">
+   CSE
+   </a>
+   </div>
+<br>
+</div> <!-- Menu bar ends -->
+<div class="GrcContents">
+<!-- ### -->
+<p class="heading">
+<big><a name="about">
+<span style="font-style: italic; font-weight: bold;"><span style="font-family: sans-serif;">gdfa</span>: A Generic Data Flow
+Analyzer for GCC</span>
+</a></big>
+</p>
+
+<div style="text-align: left;">
+<ul>
+  <li>The design and implementation of <span style="font-style: italic; font-family: sans-serif;">gdfa</span> is
+motivated by the following objectives</li>
+  <br>
+  <ul style="text-align: left;">
+    <ul>
+      <li>&nbsp;Demonstrating the practical significance of the
+following important generalization.</li>
+    </ul>
+  </ul>
+  <div style="margin-left: 80px; text-align: left;">Instead of
+implementing specific
+analyses directly, it is useful to implement a generic driver that is
+based on a carefully chosen set of abstractions. The task of
+implementing a particular analyzer then reduces to merely specifying
+the analysis by instantiating these abstractions to concrete values.<br>
+  <br>
+  </div>
+  <ul style="text-align: left;">
+    <ul>
+      <li>Providing an easy to use and easy to extend data flow
+analysis infrastructure. The goal is to facilitate experimentation in
+terms of studying existing analyses, defining new analyses, and
+exploring different analysis algorithms.</li>
+      <br>
+    </ul>
+  </ul>
+  <li> Releases</li>
+  <br>
+  <ul>
+
+    <li> gdfa-1.2</li>
+    <ul>
+
+      <li><a href="http://www.cse.iitb.ac.in/grc/software/gdfa-v1.2-gcc-4.3.0.patch">Download Patch</a> </li>
+      <li><a href="http://www.cse.iitb.ac.in/grc/software/gdfa-v1.1.pdf">Documentation</a> </li>
+      <li>Misclleneous Bug Fixes</li>
+      <br>
+    </ul>
+
+    
+    <li> gdfa-1.1</li>
+    <ul>
+
+      <li><a href="http://www.cse.iitb.ac.in/grc/software/gdfa-v1.1-gcc-4.3.0.patch">Download Patch</a> </li>
+      <li><a href="http://www.cse.iitb.ac.in/grc/software/gdfa-v1.1.pdf">Documentation</a> </li>
+      <li>Features: Support for Reaching definition analysis is added
+to Generic Bit Vector Data Flow Analyzer. </li>
+      <li>Misclleneous Bug Fixes</li>
+      <br>
+    </ul>
+
+    <li> gdfa-1.0</li>
+    <ul>
+
+      <li><a href="http://www.cse.iitb.ac.in/grc/software/gdfa-v1.0-gcc-4.3.0.patch">Download Patch</a></li>
+      <li><a href="http://www.cse.iitb.ac.in/grc/software/gdfa-v1.pdf">Documentation</a></li>
+      <li>Features: Generic Bit Vector Data Flow Analyzer for Gimple IR
+with example instantiations for several bit vector frameworks. This
+data flow analyzer is an intraprocedural (i.e. "per function") analyzer
+and hence restricts itself to local variables and expressions. Following
+data flow analysis problems are implemented, <br>
+        <ol>
+          <li>Available expressions analysis (ave)</li>
+          <li>Partially available expressions analysis (pav)</li>
+          <li>Anticipable expressions analysis (ant)</li>
+          <li>Live variables analysis (lv)</li>
+          <li>Partial redundancy elimination (pre)</li>
+        </ol>
+      </li>
+      <br>
+    </ul>
+  </ul>
+  <li>Prerequisites <br>
+  </li>
+</ul>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; Above code is tested with
+the folllowing system configuration.<br>
+<ul>
+  <ul>
+    <li>Operating System: Ubuntu 8.04 Hardy Release</li>
+    <li>Native compiler: Gnu Compiler collection (GCC) 4.x</li>
+    <li>Source code on which above patch should be applied: GCC-4.3.0<br>
+    </li>
+  </ul>
+</ul>
+<ul>
+  <li>The source code of <span style="font-style: italic; font-family: sans-serif;">gdfa</span>
+is
+distributed under <a href="http://www.gnu.org/licenses/gpl.html">GNU
+GPL v 2.0</a> or later. To apply the
+patch, give the following command in the top level source directory <br>
+  </li>
+</ul>
+<div style="text-align: left; margin-left: 40px;"><big><code style="font-weight: bold;">patch -p0 &lt;<span style="font-style: italic; font-family: sans-serif;">
+</span></code><code style="font-weight: bold;"><span style="font-style: italic; font-family: sans-serif;"><small><small>patch_name</small></small></span></code><code style="font-weight: bold;"> </code></big><br>
+</div>
+<ul style="text-align: left;">
+  <li>The documentation
+of <span style="font-style: italic; font-family: sans-serif;">gdfa</span>
+is
+distributed under <a href="http://www.gnu.org/licenses/fdl.html">GNU
+FDL v 1.2</a> or later. <br>
+  </li>
+</ul>
+</div>
+<ul style="text-align: left;">
+  <li>For more details on data flow analysis, please refer to the book <a href="http://www.cse.iitb.ac.in/uday/dfaBook-web">Data Flow Analysis:
+Theory and Practice</a>.</li>
+  <br>
+  <li>The Copyright of <span style="font-style: italic; font-family: sans-serif;">gdfa</span>
+ code and its manual is held by the <a href="http://www.cse.iitb.ac.in/grc">GCC Resource Center</a> of <a href="http://www.cse.iitb.ac.in/">the Department of Computer Science
+and Engineeting, Indian Institute of Technology Bombay.</a><br>
+  </li>
+</ul>
+</div>
+
+</body></html>

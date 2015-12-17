@@ -1,0 +1,267 @@
+
+;; Function test (test)
+
+
+Number of relevant entities: 4
+	
+ Bit position and entity mapping is  **************************************
+	0:(d > 2),1:(d > 1),2:(d > 0),3:(d + 1)
+ 
+ Initial values ************************
+
+Basic Block 2. Preds:  ENTRY. Succs:  3
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  1111
+	KILL Entities:    (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 3. Preds:  2 10. Succs:  4 5
+	----------------------------
+	GEN Bit Vector:   1000
+	GEN Entities:     (d > 2)
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 4. Preds:  3. Succs:  EXIT
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 5. Preds:  3. Succs:  6 7
+	----------------------------
+	GEN Bit Vector:   0100
+	GEN Entities:     (d > 1)
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 6. Preds:  5. Succs:  10
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 7. Preds:  5. Succs:  8 9
+	----------------------------
+	GEN Bit Vector:   0010
+	GEN Entities:     (d > 0)
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 8. Preds:  7. Succs:  10
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 9. Preds:  7. Succs:  10
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+Basic Block 10. Preds:  6 8 9. Succs:  3
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  1111
+	KILL Entities:    (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	IN Bit Vector:    1111
+	IN Entities:      (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	OUT Bit Vector:   1111
+	OUT Entities:     (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+ Total Number of Iterations = 2 *******
+
+ Final values **************************
+
+Basic Block 2. Preds:  ENTRY. Succs:  3
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  1111
+	KILL Entities:    (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	IN Bit Vector:    0000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000
+	OUT Entities:     
+	------------------------------
+Basic Block 3. Preds:  2 10. Succs:  4 5
+	----------------------------
+	GEN Bit Vector:   1000
+	GEN Entities:     (d > 2)
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    0000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   1000
+	OUT Entities:     (d > 2)
+	------------------------------
+Basic Block 4. Preds:  3. Succs:  EXIT
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1000
+	IN Entities:      (d > 2)
+	------------------------------
+	OUT Bit Vector:   1000
+	OUT Entities:     (d > 2)
+	------------------------------
+Basic Block 5. Preds:  3. Succs:  6 7
+	----------------------------
+	GEN Bit Vector:   0100
+	GEN Entities:     (d > 1)
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1000
+	IN Entities:      (d > 2)
+	------------------------------
+	OUT Bit Vector:   1100
+	OUT Entities:     (d > 2),(d > 1)
+	------------------------------
+Basic Block 6. Preds:  5. Succs:  10
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1100
+	IN Entities:      (d > 2),(d > 1)
+	------------------------------
+	OUT Bit Vector:   1100
+	OUT Entities:     (d > 2),(d > 1)
+	------------------------------
+Basic Block 7. Preds:  5. Succs:  8 9
+	----------------------------
+	GEN Bit Vector:   0010
+	GEN Entities:     (d > 0)
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1100
+	IN Entities:      (d > 2),(d > 1)
+	------------------------------
+	OUT Bit Vector:   1110
+	OUT Entities:     (d > 2),(d > 1),(d > 0)
+	------------------------------
+Basic Block 8. Preds:  7. Succs:  10
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1110
+	IN Entities:      (d > 2),(d > 1),(d > 0)
+	------------------------------
+	OUT Bit Vector:   1110
+	OUT Entities:     (d > 2),(d > 1),(d > 0)
+	------------------------------
+Basic Block 9. Preds:  7. Succs:  10
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1110
+	IN Entities:      (d > 2),(d > 1),(d > 0)
+	------------------------------
+	OUT Bit Vector:   1110
+	OUT Entities:     (d > 2),(d > 1),(d > 0)
+	------------------------------
+Basic Block 10. Preds:  6 8 9. Succs:  3
+	----------------------------
+	GEN Bit Vector:   0000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  1111
+	KILL Entities:    (d > 2),(d > 1),(d > 0),(d + 1)
+	------------------------------
+	IN Bit Vector:    1100
+	IN Entities:      (d > 2),(d > 1)
+	------------------------------
+	OUT Bit Vector:   0000
+	OUT Entities:     
+	------------------------------

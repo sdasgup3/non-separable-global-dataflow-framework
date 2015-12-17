@@ -1,0 +1,239 @@
+
+;; Function exmp (exmp)
+
+
+Number of relevant entities: 7
+	
+ Bit position and entity mapping is  **************************************
+	0:(b = 4),1:(a = b + c),2:(d = a * b),3:(b = a - c),4:(c = b + c),5:(d = a + b),6:(c = a * b)
+ 
+ Initial values ************************
+
+Basic Block 2. Preds:  ENTRY. Succs:  3 4
+	----------------------------
+	GEN Bit Vector:   1110000
+	GEN Entities:     (b = 4),(a = b + c),(d = a * b)
+	------------------------------
+	KILL Bit Vector:  0001010
+	KILL Entities:    (b = a - c),(d = a + b)
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+Basic Block 3. Preds:  2. Succs:  9
+	----------------------------
+	GEN Bit Vector:   0001000
+	GEN Entities:     (b = a - c)
+	------------------------------
+	KILL Bit Vector:  1000000
+	KILL Entities:    (b = 4)
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+Basic Block 4. Preds:  2 8. Succs:  5 7
+	----------------------------
+	GEN Bit Vector:   0000100
+	GEN Entities:     (c = b + c)
+	------------------------------
+	KILL Bit Vector:  0000001
+	KILL Entities:    (c = a * b)
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+Basic Block 5. Preds:  4 5. Succs:  5 6
+	----------------------------
+	GEN Bit Vector:   0000010
+	GEN Entities:     (d = a + b)
+	------------------------------
+	KILL Bit Vector:  0010000
+	KILL Entities:    (d = a * b)
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+Basic Block 6. Preds:  5. Succs:  8
+	----------------------------
+	GEN Bit Vector:   0000000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+Basic Block 7. Preds:  4. Succs:  8
+	----------------------------
+	GEN Bit Vector:   0000001
+	GEN Entities:     (c = a * b)
+	------------------------------
+	KILL Bit Vector:  0000100
+	KILL Entities:    (c = b + c)
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+Basic Block 8. Preds:  6 7. Succs:  4 9
+	----------------------------
+	GEN Bit Vector:   0000000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+Basic Block 9. Preds:  3 8. Succs:  EXIT
+	----------------------------
+	GEN Bit Vector:   0000000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   0000000
+	OUT Entities:     
+	------------------------------
+ Total Number of Iterations = 3 *******
+
+ Final values **************************
+
+Basic Block 2. Preds:  ENTRY. Succs:  3 4
+	----------------------------
+	GEN Bit Vector:   1110000
+	GEN Entities:     (b = 4),(a = b + c),(d = a * b)
+	------------------------------
+	KILL Bit Vector:  0001010
+	KILL Entities:    (b = a - c),(d = a + b)
+	------------------------------
+	IN Bit Vector:    0000000
+	IN Entities:      
+	------------------------------
+	OUT Bit Vector:   1110000
+	OUT Entities:     (b = 4),(a = b + c),(d = a * b)
+	------------------------------
+Basic Block 3. Preds:  2. Succs:  9
+	----------------------------
+	GEN Bit Vector:   0001000
+	GEN Entities:     (b = a - c)
+	------------------------------
+	KILL Bit Vector:  1000000
+	KILL Entities:    (b = 4)
+	------------------------------
+	IN Bit Vector:    1110000
+	IN Entities:      (b = 4),(a = b + c),(d = a * b)
+	------------------------------
+	OUT Bit Vector:   0111000
+	OUT Entities:     (a = b + c),(d = a * b),(b = a - c)
+	------------------------------
+Basic Block 4. Preds:  2 8. Succs:  5 7
+	----------------------------
+	GEN Bit Vector:   0000100
+	GEN Entities:     (c = b + c)
+	------------------------------
+	KILL Bit Vector:  0000001
+	KILL Entities:    (c = a * b)
+	------------------------------
+	IN Bit Vector:    1110111
+	IN Entities:      (b = 4),(a = b + c),(d = a * b),(c = b + c),(d = a + b),(c = a * b)
+	------------------------------
+	OUT Bit Vector:   1110110
+	OUT Entities:     (b = 4),(a = b + c),(d = a * b),(c = b + c),(d = a + b)
+	------------------------------
+Basic Block 5. Preds:  4 5. Succs:  5 6
+	----------------------------
+	GEN Bit Vector:   0000010
+	GEN Entities:     (d = a + b)
+	------------------------------
+	KILL Bit Vector:  0010000
+	KILL Entities:    (d = a * b)
+	------------------------------
+	IN Bit Vector:    1110110
+	IN Entities:      (b = 4),(a = b + c),(d = a * b),(c = b + c),(d = a + b)
+	------------------------------
+	OUT Bit Vector:   1100110
+	OUT Entities:     (b = 4),(a = b + c),(c = b + c),(d = a + b)
+	------------------------------
+Basic Block 6. Preds:  5. Succs:  8
+	----------------------------
+	GEN Bit Vector:   0000000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1100110
+	IN Entities:      (b = 4),(a = b + c),(c = b + c),(d = a + b)
+	------------------------------
+	OUT Bit Vector:   1100110
+	OUT Entities:     (b = 4),(a = b + c),(c = b + c),(d = a + b)
+	------------------------------
+Basic Block 7. Preds:  4. Succs:  8
+	----------------------------
+	GEN Bit Vector:   0000001
+	GEN Entities:     (c = a * b)
+	------------------------------
+	KILL Bit Vector:  0000100
+	KILL Entities:    (c = b + c)
+	------------------------------
+	IN Bit Vector:    1110110
+	IN Entities:      (b = 4),(a = b + c),(d = a * b),(c = b + c),(d = a + b)
+	------------------------------
+	OUT Bit Vector:   1110011
+	OUT Entities:     (b = 4),(a = b + c),(d = a * b),(d = a + b),(c = a * b)
+	------------------------------
+Basic Block 8. Preds:  6 7. Succs:  4 9
+	----------------------------
+	GEN Bit Vector:   0000000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1110111
+	IN Entities:      (b = 4),(a = b + c),(d = a * b),(c = b + c),(d = a + b),(c = a * b)
+	------------------------------
+	OUT Bit Vector:   1110111
+	OUT Entities:     (b = 4),(a = b + c),(d = a * b),(c = b + c),(d = a + b),(c = a * b)
+	------------------------------
+Basic Block 9. Preds:  3 8. Succs:  EXIT
+	----------------------------
+	GEN Bit Vector:   0000000
+	GEN Entities:     
+	------------------------------
+	KILL Bit Vector:  0000000
+	KILL Entities:    
+	------------------------------
+	IN Bit Vector:    1111111
+	IN Entities:      (b = 4),(a = b + c),(d = a * b),(b = a - c),(c = b + c),(d = a + b),(c = a * b)
+	------------------------------
+	OUT Bit Vector:   1111111
+	OUT Entities:     (b = 4),(a = b + c),(d = a * b),(b = a - c),(c = b + c),(d = a + b),(c = a * b)
+	------------------------------
