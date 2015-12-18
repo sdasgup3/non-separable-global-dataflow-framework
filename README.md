@@ -4,11 +4,11 @@
   * Report.pdf                
   * Presentation.pdf
 * Documents
-  * gdfa-v1.2-gcc-4.3.0.patch : gdfa pathch for gcc 4.3.0 
+  * gdfa-v1.2-gcc-4.3.0.patch : _gdfa patch for gcc 4.3.0_ 
 * Test
 * SourceCodeInfo : 
-  * listOfFilesModified.txt : List of files Modified 
-  * CodeDiff.txt : This file can be patched to gcc 4.3.0 source code 
+  * listOfFilesModified.txt : _List of files Modified_ 
+  * CodeDiff.txt : _This file can be patched to gcc 4.3.0 source code_ 
   * Source Files
     * gimple-pfbvdfa-driver.c
     * gimple-pfbvdfa-specs.c
