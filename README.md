@@ -18,23 +18,28 @@
     * tree-pass.h
 
 ##HOW TO BUILD
-
-* mkdir gdfa
-* cd gdfa
-* Download gcc-4.3.0-tar.gz from https://gcc.gnu.org/mirrors.html  in here.
-* Copy gdfa-v1.2-gcc-4.3.0.patch from Documents in here. This path can be downloaded from http://www.cse.iitb.ac.in/grc/index.php?page=gdfa.
-* tar -xvf gcc-4.3.0-tar.gz
-* mkdir gcc-4.3.0.obj gcc-4.3.0.install
-* patch -p0   < gdfa-v1.2-gcc-4.3.0.patch
-* cd gcc-4.3.0.obj
-* ../gcc-4.3.0/configure --enable-languages=c --prefix=<path to gcc-4.3.0.install>
-* make all-gcc TARGET-gcc=cc1 BOOT_CFLAGS='-O0 -g3' -j 2
-* make install
+```
+mkdir gdfa
+cd gdfa
+Download gcc-4.3.0-tar.gz from https://gcc.gnu.org/mirrors.html  in here.
+Copy gdfa-v1.2-gcc-4.3.0.patch from Documents in here. This path can be downloaded from http://www.cse.iitb.ac.in/grc/index.php?page=gdfa.
+tar -xvf gcc-4.3.0-tar.gz
+mkdir gcc-4.3.0.obj gcc-4.3.0.install
+patch -p0   < gdfa-v1.2-gcc-4.3.0.patch
+cd gcc-4.3.0.obj
+../gcc-4.3.0/configure --enable-languages=c --prefix=<path to gcc-4.3.0.install>
+make all-gcc TARGET-gcc=cc1 BOOT_CFLAGS='-O0 -g3' -j 2
+make install
+```
 
 ##HOW TO RUN
+The following commands generate test_1.c.021t.gdfa_fv (faint variable analysis) and 
+test_1.c.021t.gdfa_puv (possibly uninitialized variable analysis)
 
-* cd Test/test_1/
-* cc1 -fgdfa -fdump-tree-all test_1.c _Generate test_1.c.021t.gdfa_fv (faint variable analysis) and test_1.c.021t.gdfa_puv (possibly uninitialized variable analysis)_
+```
+cd Test/test_1/
+cc1 -fgdfa -fdump-tree-all test_1.c _Generate test_1.c.021t.gdfa_fv (faint variable analysis) and test_1.c.021t.gdfa_puv (possibly uninitialized variable analysis)_
+```
 
 ##TESTING
 
