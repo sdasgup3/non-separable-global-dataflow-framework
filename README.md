@@ -31,7 +31,7 @@
 * make all-gcc TARGET-gcc=cc1 BOOT_CFLAGS='-O0 -g3' -j 2
 * make install
 
-##HOW TO TEST THE CORRECTNESS OF BEHAVIOUR
+##TESTING
 
 The Test directory contains the following testcases:
 
