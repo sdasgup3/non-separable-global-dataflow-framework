@@ -38,7 +38,7 @@ test_1.c.021t.gdfa_puv (possibly uninitialized variable analysis)
 
 ```
 cd Test/test_1/
-cc1 -fgdfa -fdump-tree-all test_1.c _Generate test_1.c.021t.gdfa_fv (faint variable analysis) and test_1.c.021t.gdfa_puv (possibly uninitialized variable analysis)_
+cc1 -fgdfa -fdump-tree-all test_1.c 
 ```
 
 ##TESTING
