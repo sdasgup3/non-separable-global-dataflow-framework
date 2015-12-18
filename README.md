@@ -6,6 +6,8 @@
 * Documents
   * gdfa-v1.2-gcc-4.3.0.patch : _gdfa patch for gcc 4.3.0_ 
 * Test
+  * Test Directories containing C code to be analysed and golden outputs for comparison.
+
 * SourceCodeInfo : 
   * listOfFilesModified.txt : _List of files Modified_ 
   * CodeDiff.txt : _This file can be patched to gcc 4.3.0 source code_ 
