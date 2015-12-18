@@ -31,6 +31,11 @@
 * make all-gcc TARGET-gcc=cc1 BOOT_CFLAGS='-O0 -g3' -j 2
 * make install
 
+##HOW TO RUN
+
+* cd Test/test_1/
+* cc1 -fgdfa -fdump-tree-all test_1.c _Generate test_1.c.021t.gdfa_fv (faint variable analysis) and test_1.c.021t.gdfa_puv (possibly uninitialized variable analysis)_
+
 ##TESTING
 
 The Test directory contains the following testcases:
