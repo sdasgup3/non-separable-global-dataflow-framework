@@ -6,7 +6,10 @@
 * Documents
   * gdfa-v1.2-gcc-4.3.0.patch : _gdfa patch for gcc 4.3.0_ 
 * Test
-  * Test Directories containing C code to be analysed and golden outputs for comparison.
+  * Test Directories containing 
+    * C code to be analysed
+    * Golden outputs for comparison. Examples: gold_test_*.c.022t.gdfa_puv and gold_test_*.c.021t.gdfa_fv
+    * Gen or Kill Impact chains in *.ps format. Example: gen_impact_chain.dot kill_impact_chain.dot
 * SourceCodeInfo : 
   * listOfFilesModified.txt : _List of files Modified_ 
   * CodeDiff.txt : _This file can be patched to gcc 4.3.0 source code_ 
