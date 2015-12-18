@@ -41,38 +41,20 @@ cd Test/test_1/
 cc1 -fgdfa -fdump-tree-all test_1.c 
 ```
 
-##TESTING
+##TESTING AUTOMATION
 
-The Test directory contains the following testcases:
+```
+_Run and test the testsuite_
+cd Test
+make       _Compile all the C source files and dumps the analysis results in respective directories_
+make test  _Compare the analysis dumps with the golden output provided_
+make clean _Remove the anaylsis dumps_
 
-        Test_1     : Contain the case test_1.c and the expected output of all the dump files as  gold_test_1.c.*
+OR
+_Run and test unit cases_
+cd Test_3
+make 
+make test
+make clean
 
-                   To run testing,
-                                 $GDFA_HOME/gcc/cc1 -fgdfa -fdump-tree-all test_1.c
-                                                                 /*   This will generate many dump files as test_1.c.*                         */
-                                                                 /*To verify if the generated output is same as expected do the following:     */
-                                ./compute_diff.sh                /*If no message comes diff is ok  */
-                                ./remove.sh                      /*Remove the redundant files.     */
-
-
-        Test_2 : Contain the case test_2.c and the expected output of all the dump files as  gold_test_2.c.*
-
-                  To run testing,
-                                  $GDFA_HOME/gcc/cc1 -fgdfa -fdump-tree-all test_2.c
-                                                                 /*   This will generate many dump files as test_2.c.*                           */
-                                                                 /*   To verify if the generated output is same as expected do the following:    */
-                                  ./compute_diff.sh              /*   If no message comes diff is ok  */
-                                  ./remove.sh                    /*   Remove the redundant files.     */
-
-
-        Test_3 : Contain the case test_3_1.c, test_3_2.c, test_3_3.c and the expected output of all the dump files as  gold_test_3_*.c.*
-
-                   To run testing,
-                                  $GDFA_HOME/gcc/cc1 -fgdfa -fdump-tree-all test_3_1.c
-                                  $GDFA_HOME/gcc/cc1 -fgdfa -fdump-tree-all test_3_2.c
-                                  $GDFA_HOME/gcc/cc1 -fgdfa -fdump-tree-all test_3_3.c
-                                                               /*   This will generate many dump files as test_3_*.c.*                             */
-                                                               /*   To verify if the generated output is same as expected do the following:        */
-                                ./compute_diff.sh              /*   If no message comes diff is ok    */
-                                ./remove.sh                    /*   Remove the redundant files.        */
-
+```
